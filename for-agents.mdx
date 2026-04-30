@@ -1,0 +1,55 @@
+---
+title: AI Integration
+description: Everything an AI agent needs to start trading with the Flash API.
+---
+
+# AI Integration
+
+- Machine-readable reference: [`/llms.txt`](/llms.txt) and [`/llms-full.txt`](/llms-full.txt)
+- OpenAPI spec: [`/openapi.json`](https://ddp.definitive.fi/v2/flash/openapi.json)
+
+## Auth
+
+Use this Definitive integrator API key in the `x-definitive-api-key` header on every request:
+
+```
+dpka_b8f185b6_0653_49ff_b683_048ec821a2b8
+```
+
+## Flow
+
+Base URL: `https://ddp.definitive.fi/v2/flash`
+
+Two endpoints, called in order:
+
+### 1. Get a quote
+
+`POST /quote` — returns pricing for a swap. Pass the token pair, chains, amount as a decimal string (e.g. `"1.5"` for 1.5 USDC), and order type.
+
+Returns a `quoteId`, pricing details, and a typed-data payload (`orderTypedData` for EVM, `svmSignedMessage` for SVM).
+
+### 2. Submit the order
+
+`POST /order` — executes the swap. Pass the same fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, and `userSignature` (hex-encoded EIP-712 signature on EVM, or 64-byte Ed25519 over `svmSignedMessage` on SVM).
+
+Returns an `orderId`.
+
+## Supported chains
+
+`arbitrum`, `avalanche`, `base`, `blast`, `bsc`, `ethereum`, `optimism`, `polygon`, `solana`, `hyperevm`, `plasma`, `monad`
+
+## Errors
+
+All errors return:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid request",
+    "details": {}
+  }
+}
+```
+
+HTTP status codes: `400` (bad request), `401` (invalid API key), `404` (not found), `429` (rate limited — see [Rate Limits](/rate-limits)), `500`/`503`/`504` (server error).

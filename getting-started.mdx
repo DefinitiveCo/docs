@@ -1,0 +1,63 @@
+---
+title: Become an Integrator
+description: Create a Flash API key and make your first request.
+---
+
+# Become an Integrator
+
+<Note>
+  This walkthrough is for **integrators** running their own Flash-enabled API key (your org appears as the integrator on every order, supports per-integrator fees, etc.).
+
+  If you only want to **trade**, skip the signup flow — call the API directly with the prefilled Definitive integrator key `dpka_b8f185b6_0653_49ff_b683_048ec821a2b8` in the Quote/Order playgrounds under the **Docs** tab.
+</Note>
+
+Follow these steps to get a Flash-enabled Definitive integrator API key.
+
+<Steps>
+  <Step title="Sign in to Definitive">
+    Go to [app.definitive.fi](https://app.definitive.fi) and sign in.
+
+    <Frame caption="Sign-in page at app.definitive.fi.">
+      <img src="/images/onboarding-step1.png" alt="Definitive sign-in page." />
+    </Frame>
+  </Step>
+
+  <Step title="Open the Organization tab">
+    Click the profile icon in the top-right corner of the dashboard, then navigate to the **Organization** tab.
+
+    <Frame caption="Profile menu and Organization tab.">
+      <img src="/images/onboarding-step2.png" alt="Profile menu with Organization tab." />
+    </Frame>
+  </Step>
+
+  <Step title="Select Flash in Create New Key">
+    In the **Create New Key** section, select **Flash** as the key type. Standard API keys do not authenticate against Flash endpoints.
+
+    <Frame caption="Selecting Flash in the Create New Key form.">
+      <img src="/images/onboarding-step3.png" alt="Create New Key form with Flash selected." />
+    </Frame>
+  </Step>
+
+  <Step title="Generate and copy your key">
+    Click **Generate**. Copy the key — it will look like `dpka_xxxxxxxx_xxxx_xxxx_xxxx_xxxxxxxxxxxx`.
+
+    <Frame caption="Generated API key with copy button.">
+      <img src="/images/onboarding-step4.png" alt="Generated API key." />
+    </Frame>
+  </Step>
+</Steps>
+
+## Make your first request
+
+<Note>
+  Use the newly generated API key in place of the default Definitive one when quoting and submitting the order.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Quote" href="/quote" icon="arrow-right-arrow-left">
+    Request real-time pricing and typed-data payload for a swap.
+  </Card>
+  <Card title="Order" href="/order" icon="paper-plane">
+    Submit a signed quote for MEV-protected execution.
+  </Card>
+</CardGroup>
