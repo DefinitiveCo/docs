@@ -1,0 +1,32 @@
+---
+title: Security
+description: Security measures, audit status, and responsible disclosure for the Flash API.
+---
+
+# Security
+
+## API Key Security
+
+Flash requires an api key passed via the `x-definitive-api-key` header.
+
+## MEV Protection
+
+Orders are routed through private channels to prevent front-running and sandwich attacks. This ensures that swaps are executed without being exploited by MEV bots monitoring the public mempool.
+
+## Order Signing
+
+Orders require a cryptographic signature from the funder wallet:
+- **EVM chains**: EIP-712 typed-data signature over `orderTypedData` returned in the quote response.
+- **SVM chains**: 64-byte Ed25519 signature over `svmSignedMessage` returned in the quote response.
+
+Only the wallet owner can authorize swaps of their funds. No third party can submit an order on behalf of a wallet without a valid signature.
+
+## Audits
+
+<Note>
+Audit reports will be published here when available.
+</Note>
+
+## Responsible Disclosure
+
+If you discover a security vulnerability, please email security@definitive.fi. 

@@ -1,0 +1,35 @@
+---
+title: Rate Limits
+description: Per-API-key request limits and 429 response behavior.
+---
+
+# Rate Limits
+
+The Flash API enforces a per-API-key rate limit:
+
+| Limit         | Window       |
+| ------------- | ------------ |
+| 5 requests    | per second   |
+
+### Response headers
+
+Every response includes the following draft-6 rate-limit headers:
+
+| Header                | Meaning                                            |
+| --------------------- | -------------------------------------------------- |
+| `RateLimit-Policy`    | Limit and window, e.g. `5;w=1`                     |
+| `RateLimit-Limit`     | Maximum requests in the current window             |
+| `RateLimit-Remaining` | Requests remaining in the current window           |
+| `RateLimit-Reset`     | Seconds until the window resets                    |
+
+On a `429` response, an additional header is set:
+
+| Header        | Meaning                                       |
+| ------------- | --------------------------------------------- |
+| `Retry-After` | Seconds until you may retry the request       |
+
+## Recommended client behavior
+
+- Read `RateLimit-Remaining` after each successful response and throttle when it nears zero.
+- On `429`, back off for at least the number of seconds in `Retry-After` before retrying.
+- Use exponential backoff with jitter for sustained pressure.
