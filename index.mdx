@@ -1,51 +1,113 @@
 ---
-title: Overview
-description: Swap any asset to any asset with advanced orders with Definitive Flash API.
+title: "Overview"
+description: "Advanced onchain trading for wallets, apps, and AI agents. One API. Every order type. EVM and Solana."
 ---
 
-## Key features
+Flash is Definitive's trading API for **wallets, trading apps, and AI agents** that need more than a basic market swap. One integration gives your users Limit, Stop Loss, Take Profit, TWAP, DCA, and Quick Trade orders, routed across **200+ DEXs and market makers** on **12 chains**, with execution managed end to end.
 
-- **Instant quotes** — real-time pricing, fee breakdown, and routing for any supported token pair.
-- **Wallet signing** — quotes return a typed-data payload; the swapper signs with their wallet, and Definitive executes.
-- **MEV protection** — orders are settled through private channels to avoid front-running.
-
-## Flow
-
-```mermaid
-sequenceDiagram
-    participant Partner
-    participant Flash API
-    participant Blockchain
-
-    Partner->>Flash API: POST /quote
-    Flash API-->>Partner: Quote (quoteId, pricing, typed-data)
-    Partner->>Partner: Sign typed-data with wallet
-    Partner->>Flash API: POST /order (quoteId + signature)
-    Flash API-->>Partner: Order confirmation
-    Flash API->>Blockchain: Execute swap (MEV-protected)
-```
-
-## Authentication
-
-All Flash API requests require the `x-definitive-api-key` header.
+<CardGroup cols={3}>
+  <Card title="$3B+" icon="chart-line">
+    Notional volume executed
+  </Card>
+  <Card title="500K+" icon="bolt">
+    Trade orders landed
+  </Card>
+  <Card title="200+" icon="layer-group">
+    Liquidity sources aggregated
+  </Card>
+</CardGroup>
 
 <Note>
-The Definitive integrator API key `dpka_b8f185b6_0653_49ff_b683_048ec821a2b8` is prefilled in the interactive playground on every endpoint page and is safe to use for development.
+  **Audited by Zellic and OtterSec.** Non-custodial by design. Trusted by top hedge funds, DAOs, and pro traders. Built by Coinbase Prime alumni. [See audits →](/security)
 </Note>
 
-## Next
+## Why Flash
 
 <CardGroup cols={2}>
-  <Card title="Agentic Trading" href="/for-agents" icon="robot">
-    Quickstart for AI trading agents to quote and place a trade.
+  <Card title="Every order type, one API" icon="shapes">
+    Market, Limit, Stop Loss, Take Profit, TWAP, DCA, and Quick Trade from a single endpoint. Skip the 6-month build.
   </Card>
-  <Card title="Become an Integrator" href="/getting-started" icon="key">
-    Walkthrough to create your own Flash-enabled integrator key.
+  <Card title="Smart routing" icon="route">
+    Quotes aggregated across 200+ DEXs and offchain market makers. Best route returned in one response.
   </Card>
-  <Card title="Quote" href="/quote" icon="arrow-right-arrow-left">
-    Request real-time pricing and typed-data payload for a swap.
+  <Card title="Managed execution" icon="gears">
+    Flash handles gas, MEV protection, simulation, and retries. You submit an intent. We land the trade.
   </Card>
-  <Card title="Order" href="/order" icon="paper-plane">
+  <Card title="Non-custodial" icon="shield-halved">
+    Works with your EOA, MPC, multi-sig, or embedded smart wallet.
+  </Card>
+  <Card title="Built for agents" icon="robot">
+    Stateless REST. Clean JSON. Designed to be consumed by both developers and LLMs.
+  </Card>
+  <Card title="You set the fees" icon="coins">
+    Charge any `feeBps` you choose, paid to your `feeRecipient` on every fill. No integration fee.
+  </Card>
+</CardGroup>
+
+## Order types
+
+The most advanced order surface of any onchain trading API. Each type is one parameter change away.
+
+| Type | What it does |
+| --- | --- |
+| **Market** | Execute immediately at the best available price. |
+| **Limit** | Fill only at your specified price or better. |
+| **Stop Loss** | Trigger a market sell when price falls to a threshold. |
+| **Take Profit** | Trigger a market sell when price rises to a target. |
+| **TWAP** | Break a large order into tranches over 10 min to 30 days, with privacy-preserving execution. |
+| **DCA** | Recurring buys or sells at regular time intervals. |
+| **Quick Trade** | Optimized with higher slippage settings for high-volatility or low-liquidity tokens. |
+
+Most aggregators stop at Market. Flash is the only API that ships advanced order types across EVM and Solana.
+
+## How it works
+
+<Steps>
+  <Step title="Quote">
+    Call `/quote` with your trade parameters. Flash returns the best route across 200+ liquidity sources and a signable payload.
+  </Step>
+  <Step title="Sign">
+    The user signs the EIP-712 (EVM) or SPL (Solana) payload offchain.
+  </Step>
+  <Step title="Land">
+    Submit the signed payload to `/order`. Flash handles gas, MEV protection, simulation, and onchain landing.
+  </Step>
+</Steps>
+
+## Try it in 30 seconds
+
+The integrator API key `dpka_2bd021e7_6458_4042_9f20_b01c9a95c2a4` is prefilled in every interactive endpoint and safe to use for development. Hit the live `/quote` playground to send a real request in cURL, Python, or JavaScript with parameters of your choice.
+
+<Card title="Open the Quote playground" icon="play" href="/api-reference/flash/quote">
+  Interactive request builder. Auto-generated from the live OpenAPI spec, prefilled with the dev key. No setup.
+</Card>
+
+## Built for AI agents
+
+Flash is stateless, REST-based, and JSON-native. Agents submit an intent. Flash handles gas, nonces, MEV, and retries.
+
+<CardGroup cols={2}>
+  <Card title="Agentic Trading Quickstart" icon="robot" href="/for-agents">
+    Two-step flow for agents to quote and place a trade.
+  </Card>
+  <Card title="llms.txt" icon="file-lines" href="/llms.txt">
+    LLM-optimized documentation index for RAG and AI consumption.
+  </Card>
+</CardGroup>
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card title="Become an Integrator" icon="key" href="/getting-started">
+    Provision your own API key in under a minute.
+  </Card>
+  <Card title="Quote endpoint" icon="bolt" href="/api-reference/flash/quote">
+    Request real-time pricing and a signable payload.
+  </Card>
+  <Card title="Order endpoint" icon="paper-plane" href="/api-reference/flash/order">
     Submit a signed quote for MEV-protected execution.
+  </Card>
+  <Card title="Supported Chains" icon="link" href="/supported-chains">
+    All 12 chains and asset coverage.
   </Card>
 </CardGroup>
