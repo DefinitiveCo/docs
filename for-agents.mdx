@@ -49,7 +49,7 @@ Returns:
 
 **Permit2 (per-order).** If the quote returns `permitTypedData`, sign it the same way as `orderTypedData`. On submit, pass the signature as `permitSignature` and echo `permitTypedData` back unchanged.
 
-**Order signature.** `orderTypedData` is a JSON-stringified EIP-712 payload. Parse it and sign with `signTypedData`. Example with [viem](https://viem.sh):
+**Order signature.** `orderTypedData` is a JSON-stringified EIP-712 payload. Parse it and sign with `signTypedData`. On submit, pass the signature as `userSignature` and echo `orderTypedData` back unchanged. Example with viem:
 
 ```ts
 import { privateKeyToAccount } from "viem/accounts";
