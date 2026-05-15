@@ -5,8 +5,17 @@ description: Everything an AI agent needs to start trading with the Flash API.
 
 # AI Integration
 
-- Machine-readable reference: [`/llms.txt`](/llms.txt) and [`/llms-full.txt`](/llms-full.txt)
-- OpenAPI spec: [`/openapi.json`](https://ddp.definitive.fi/v2/flash/openapi.json)
+Machine-readable references:
+
+- [`/llms.txt`](/llms.txt) — index of doc pages with links. Best for agents that can fetch URLs.
+- [`/llms-full.txt`](/llms-full.txt) — all docs concatenated into one file. Best for pasting into a prompt or uploading as a single context file.
+- [`/openapi.json`](https://ddp.definitive.fi/v2/flash/openapi.json) — OpenAPI spec.
+
+## Integrate with an LLM
+
+1. **Get an API key** — follow [Become an Integrator](/getting-started).
+2. **Give your LLM the docs** — point it at [`/llms.txt`](/llms.txt) or paste [`/llms-full.txt`](/llms-full.txt) into its context.
+3. **Call the API** — `POST /quote`, sign the returned payload, then `POST /order` (details below).
 
 ## Auth
 
@@ -20,17 +29,39 @@ dpka_b8f185b6_0653_49ff_b683_048ec821a2b8
 
 Base URL: `https://ddp.definitive.fi/v2/flash`
 
-Two endpoints, called in order:
+Three steps: quote → sign → submit. The walkthrough below covers EVM chains.
 
 ### 1. Get a quote
 
 `POST /quote` — returns pricing for a swap. Pass the token pair, chains, amount as a decimal string (e.g. `"1.5"` for 1.5 USDC), and order type.
 
-Returns a `quoteId`, pricing details, and a typed-data payload (`orderTypedData` for EVM, `svmSignedMessage` for SVM).
+Returns:
 
-### 2. Submit the order
+- `quoteId` — echo back on submit to lock pricing
+- pricing details (`toAmount`, `minToAmount`, `priceImpact`)
+- `orderTypedData` — the EIP-712 payload to sign
+- `approveTx` *(optional, EVM)* — a token-allowance transaction to submit onchain
+- `permitTypedData` *(optional, EVM Permit2)* — a typed-data payload to sign
 
-`POST /order` — executes the swap. Pass the same fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, and `userSignature` (hex-encoded EIP-712 signature on EVM, or 64-byte Ed25519 over `svmSignedMessage` on SVM).
+### 2. Sign the payload
+
+**Token allowance (one-time per token).** If the quote returns `approveTx`, submit it onchain first to grant the settlement contract allowance. Once landed, future orders for the same token skip this step.
+
+**Permit2 (per-order).** If the quote returns `permitTypedData`, sign it the same way as `orderTypedData`. On submit, pass the signature as `permitSignature` and echo `permitTypedData` back unchanged.
+
+**Order signature.** `orderTypedData` is a JSON-stringified EIP-712 payload. Parse it and sign with `signTypedData`. On submit, pass the signature as `userSignature` and echo `orderTypedData` back unchanged. Example with viem:
+
+```ts
+import { privateKeyToAccount } from "viem/accounts";
+
+const account = privateKeyToAccount("0x...");
+const { domain, types, primaryType, message } = JSON.parse(quote.orderTypedData);
+const userSignature = await account.signTypedData({ domain, types, primaryType, message });
+```
+
+### 3. Submit the order
+
+`POST /order` — executes the swap. Pass the same fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, `userSignature` from step 2, and `orderTypedData` echoed back unchanged. If Permit2 was used, also include `permitTypedData` (echoed unchanged) and `permitSignature`.
 
 Returns an `orderId`.
 
