@@ -36,6 +36,7 @@
             "pages": [
               "index",
               "getting-started",
+              "monetizing-your-integration",
               "supported-chains",
               "rate-limits",
               "security"
