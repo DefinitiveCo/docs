@@ -35,35 +35,37 @@ Three steps: quote → sign → submit. The walkthrough below covers EVM chains.
 
 ### 1. Get a quote
 
-`POST /quote` — returns pricing for a swap. Pass the token pair, chains, amount as a decimal string (e.g. `"1.5"` for 1.5 USDC), and order type.
+`POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset` (with matching `targetChain` / `contraChain` — same-chain only), `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`.
 
 Returns:
 
 - `quoteId` — echo back on submit to lock pricing
-- pricing details (`toAmount`, `minToAmount`, `priceImpact`)
-- `orderTypedData` — the EIP-712 payload to sign
-- `approveTx` *(optional, EVM)* — a token-allowance transaction to submit onchain
-- `permitTypedData` *(optional, EVM Permit2)* — a typed-data payload to sign
+- `from` / `to` — directional legs, each with `asset` (`"target"` or `"contra"`), `amount`, and `notional`
+- `fees.estimatedFeeNotional` — total fee in USD notional
+- `evm` *(EVM quotes)* — signing payloads:
+  - `evm.orderTypedData` — EIP-712 payload to sign
+  - `evm.permitTypedData` *(optional, Permit2)* — typed-data payload to sign
+  - `evm.approveTx` *(optional)* — token-allowance transaction to submit onchain
 
 ### 2. Sign the payload
 
-**Token allowance (one-time per token).** If the quote returns `approveTx`, submit it onchain first to grant the settlement contract allowance. Once landed, future orders for the same token skip this step.
+**Token allowance (one-time per token).** If the quote returns `evm.approveTx`, submit it onchain first to grant the settlement contract allowance. Once landed, future orders for the same token skip this step.
 
-**Permit2 (per-order).** If the quote returns `permitTypedData`, sign it the same way as `orderTypedData`. On submit, pass the signature as `permitSignature` and echo `permitTypedData` back unchanged.
+**Permit2 (per-order).** If the quote returns `evm.permitTypedData`, sign it the same way as `evm.orderTypedData`. On submit, pass the signature as `evmPermitSignature` and echo the payload back as `evmPermitTypedData`.
 
-**Order signature.** `orderTypedData` is a JSON-stringified EIP-712 payload. Parse it and sign with `signTypedData`. On submit, pass the signature as `userSignature` and echo `orderTypedData` back unchanged. Example with viem:
+**Order signature.** `evm.orderTypedData` is a JSON-stringified EIP-712 payload. Parse it and sign with `signTypedData`. On submit, pass the signature as `userSignature` and echo the payload back as `evmOrderTypedData`. Example with viem:
 
 ```ts
 import { privateKeyToAccount } from "viem/accounts";
 
 const account = privateKeyToAccount("0x...");
-const { domain, types, primaryType, message } = JSON.parse(quote.orderTypedData);
+const { domain, types, primaryType, message } = JSON.parse(quote.evm.orderTypedData);
 const userSignature = await account.signTypedData({ domain, types, primaryType, message });
 ```
 
 ### 3. Submit the order
 
-`POST /order` — executes the swap. Pass the same fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, `userSignature` from step 2, and `orderTypedData` echoed back unchanged. If Permit2 was used, also include `permitTypedData` (echoed unchanged) and `permitSignature`.
+`POST /order` — executes the swap. Pass the same fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, `userSignature` from step 2, and `evmOrderTypedData` (echo of `quote.evm.orderTypedData`). If Permit2 was used, also include `evmPermitTypedData` (echo of `quote.evm.permitTypedData`) and `evmPermitSignature`. The EVM deadline is encoded inside `evmOrderTypedData` — no separate deadline field needed.
 
 Returns an `orderId`.
 
