@@ -45,7 +45,7 @@
         ]
       },
       {
-        "tab": "AI",
+        "tab": "AI Integration",
         "groups": [
           {
             "group": "Agents",
@@ -54,7 +54,7 @@
         ]
       },
       {
-        "tab": "Docs",
+        "tab": "APIs",
         "groups": [
           {
             "group": "Flash",
