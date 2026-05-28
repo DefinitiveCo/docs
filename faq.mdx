@@ -1,0 +1,105 @@
+---
+title: "FAQ"
+description: "Frequently asked questions about Flash API. Custody, order types, MEV protection, smart wallets, and more."
+---
+
+## Custody & Asset Security
+
+<AccordionGroup>
+  <Accordion title="Do users lose custody of their assets when placing orders?">
+    No. Assets remain in the user's wallet at all times. For market orders, our contract pulls funds, executes the swap, and returns the output token to the wallet in a single atomic transaction. For limit orders, TWAPs, and DCA orders, the user grants an approval (ERC-20 allowance on EVM, or token delegate authority on Solana). We only pull funds at the moment of execution, and if the transaction fails, funds remain untouched. We never custody or hold assets on your behalf.
+  </Accordion>
+
+  <Accordion title="How do approvals work on EVM chains?">
+    Users sign two things: an ERC-20 approval to our DefinitiveFlashAllowance contract, and an off-chain signed payload that authorizes the specific order. Our contract validates this signature on-chain at execution time. Users can revoke the approval or cancel the order at any point, which removes our ability to pull funds.
+  </Accordion>
+
+  <Accordion title="How do approvals work on Solana?">
+    On Solana, the user sets Definitive as a token delegate. The user also signs an off-chain payload using a standard signature scheme. We've deployed a Solana program that verifies this signature before pulling funds. Optional deadlines can be added (for example, expiring an order after one month). Users can revoke delegate authority at any time.
+  </Accordion>
+</AccordionGroup>
+
+## Order Execution
+
+<AccordionGroup>
+  <Accordion title="How does Definitive detect when a limit order can be filled?">
+    We built a trading system modeled on high-frequency trading infrastructure. Our trade engine continuously evaluates all open orders against real-time pricing events. When a pricing event occurs for a given token, we check whether any open order for that asset is executable.
+  </Accordion>
+
+  <Accordion title="Do you support notional (USD-denominated) prices for trade orders?">
+    Yes. Most other swap platforms and order systems require cross-rate pricing (e.g., "sell when TOKEN/ETH hits X"), which is difficult for users to reason about and compute. We support notional pricing for all of our order types. For example, you can set a limit like "sell when TOKEN drops below $1.00."
+  </Accordion>
+
+  <Accordion title="Who submits the transaction to the chain?">
+    We do. After you sign a quote and pass it to us, our execution infrastructure (called "performers") lands the transaction on-chain. This is a key value add: we handle MEV protection, gas optimization, dynamic gas pricing during congestion, and transaction retry logic so you don't have to.
+  </Accordion>
+</AccordionGroup>
+
+## MEV & Transaction Protection
+
+<AccordionGroup>
+  <Accordion title="How do you protect against MEV attacks like sandwich attacks and front-running?">
+    Several layers. First, all order intents are stored off-chain, so they aren't visible on-chain before execution. Second, we route through MEV-protection endpoints when available. Third, our trade engine sets tight slippage tolerances, making sandwiching economically unviable. If a sandwich attempt pushes the price outside our slippage threshold, the transaction reverts automatically. All of these configurations are done dynamically by Flash's trade engine based on current market conditions.
+  </Accordion>
+
+  <Accordion title="Do you simulate trades before execution?">
+    Yes, twice. At quote time, we simulate all potential routes to ensure the quoted output is achievable (not just pool-math estimates). Then, immediately before execution, we simulate again to get a next-block estimate of the output amount, ensuring the fill reflects current conditions.
+  </Accordion>
+</AccordionGroup>
+
+## Supported Chains & Assets
+
+<AccordionGroup>
+  <Accordion title="Which chains do you support?">
+    All major EVM chains plus Solana: Ethereum, Base, Arbitrum, Avalanche, Blast, BNB Chain, HyperEVM, Monad, Optimism, Plasma, and Polygon. If there's an EVM chain we don't yet support that you need, we're happy to work with you to add it.
+  </Accordion>
+
+  <Accordion title="Can I trade RWAs (real-world assets) like tokenized gold?">
+    Yes. As long as the RWA token is on a supported chain and has on-chain liquidity, we'll have a quote for it.
+  </Accordion>
+</AccordionGroup>
+
+## Integration & Testing
+
+<AccordionGroup>
+  <Accordion title="Is there a sandbox or testnet environment?">
+    We recommend testing on a production chain like Base or Solana using small amounts. We've found this is more reliable than testnets, which often have inaccurate gas behavior and omit nuances of live trading.
+  </Accordion>
+
+  <Accordion title="Have your contracts been audited?">
+    Audits will be published when available. See the [Security](/security) page.
+  </Accordion>
+</AccordionGroup>
+
+## Order Types & Terminology
+
+<AccordionGroup>
+  <Accordion title="What's the difference between a stop buy order and a stop-loss order?">
+    A stop buy is a buy-side trigger: it rests until the market rises to your trigger price, then executes a market buy. A stop-loss is the sell-side equivalent: it rests until the market falls to your trigger price, then executes a market sell.
+  </Accordion>
+
+  <Accordion title="Is there a modify/amend endpoint for open orders?">
+    No, but cancelling your order and placing a new one achieves the same effect. The intended workflow is cancel-and-replace: cancel the existing order and place a new one. We're evaluating a native modify endpoint for a future release.
+  </Accordion>
+</AccordionGroup>
+
+## Signatures, Approvals & Smart Wallets
+
+<AccordionGroup>
+  <Accordion title="Does Flash accept EIP-1271 smart-wallet signatures on EVM chains?">
+    Yes. Flash supports EIP-1271 signatures, so smart contract wallets (including multisigs and account-abstraction wallets) can sign and place orders.
+  </Accordion>
+
+  <Accordion title="Does the approval transaction need to come from the funderAddress?">
+    Yes. The on-chain ERC-20 approval must be sent from the `funderAddress` specified in the order. This is a one-time transaction per user per token.
+  </Accordion>
+
+  <Accordion title="Can I batch the approval transaction with the EIP-712 order signature in a single user interaction?">
+    No. The approval is an on-chain transaction, while the order signature is a gasless off-chain payload. They're fundamentally different operations. However, the approval only needs to happen once per user per token, so subsequent orders for the same token skip this step entirely.
+  </Accordion>
+
+  <Accordion title="Is the Permit2 spender locked to the Flash settlement contract?">
+    Yes. The spender field in Permit2 signatures is scoped specifically to the Flash settlement contract. It is not a generic Permit2 spender that any arbitrary router could claim against.
+  </Accordion>
+</AccordionGroup>
+
