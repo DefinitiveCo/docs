@@ -11,7 +11,13 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
   </Accordion>
 
   <Accordion title="How do approvals work on EVM chains?">
-    Users sign two things: an ERC-20 approval to our DefinitiveFlashAllowance contract, and an off-chain signed payload that authorizes the specific order. Our contract validates this signature on-chain at execution time. Users can revoke the approval or cancel the order at any point, which removes our ability to pull funds.
+    On EVM, the user signs up to three things depending on the flow:
+
+    1. A **one-time ERC-20 approval** (`approveTx`) granting allowance the first time a wallet trades a given token. Subsequent orders for the same token skip this step.
+    2. A **Permit2 signature** (`permitTypedData`) when Permit2 is the allowance mechanism. Gasless, off-chain, signed per order.
+    3. A **Flash order signature** (`orderTypedData`), an EIP-712 payload authorizing the specific trade. Gasless, off-chain, signed per order. Always required.
+
+    Our contract validates these signatures on-chain at execution time. Users can revoke the approval or cancel the order at any point, which removes our ability to pull funds.
   </Accordion>
 
   <Accordion title="How do approvals work on Solana?">
@@ -43,7 +49,7 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
   </Accordion>
 
   <Accordion title="Do you simulate trades before execution?">
-    Yes, twice. At quote time, we simulate all potential routes to ensure the quoted output is achievable (not just pool-math estimates). Then, immediately before execution, we simulate again to get a next-block estimate of the output amount, ensuring the fill reflects current conditions.
+    Yes, twice. At quote time, we simulate the trade against on-chain state to ensure the quoted output is achievable (not just pool-math estimates). Then, immediately before execution, we simulate again against the latest chain state to validate the fill and abort if the simulation reverts.
   </Accordion>
 </AccordionGroup>
 
