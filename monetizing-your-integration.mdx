@@ -1,6 +1,94 @@
 ---
-title: Monetizing Your Integration
-description: As an integrator, you can collect fees on every trade executed through Flash.
+title: "Monetize Your Integration"
+description: "Collect fees on every trade executed through Flash. Set your rate, attach your wallets, and start earning."
 ---
 
-## Coming Soon
+As an integrator, you can collect a fee on every trade Flash executes on behalf of your users. You choose the rate, Flash collects it at execution time, and the proceeds go directly to your Definitive vault.
+
+## How it works
+
+When you call Flash, include the `flashIntegratorFeeBps` parameter. Flash deducts your fee from the trade output and routes it to the Definitive vault controlled by your fee wallet.
+
+| Concept | Detail |
+| --- | --- |
+| **Parameter** | `flashIntegratorFeeBps` |
+| **Format** | String, in basis points. `"50"` = 0.50%, `"100"` = 1.00%. |
+| **Where it goes** | Your Definitive vault, owned by the fee wallet connected to your integrator account. |
+| **When to set it** | Optional on `POST /quote` (to preview fees in the quote) and on `POST /order` (where it actually applies). |
+
+<Note>
+  You can specify `flashIntegratorFeeBps` at quote time so the quote response reflects your fee, or set it only at order time. If omitted on `POST /order`, no integrator fee is charged for that order.
+</Note>
+
+## Set your fee on every order
+
+Pass `flashIntegratorFeeBps` as a string when calling `POST /order`. Example: buying WETH with 100 USDC on Base with a 50 bps fee.
+
+```bash cURL
+curl -X POST https://ddp.definitive.fi/v2/flash/order \
+  -H "x-definitive-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "targetChain": "base",
+    "contraChain": "base",
+    "targetAsset": "0x4200000000000000000000000000000000000006",
+    "contraAsset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "side": "buy",
+    "qty": "100",
+    "orderType": "market",
+    "funderAddress": "0xUSER_WALLET",
+    "quoteId": "q_abc123",
+    "userSignature": "0x...",
+    "evmOrderTypedData": "...",
+    "flashIntegratorFeeBps": "50"
+  }'
+```
+
+**To use the same fee on every trade**, hardcode `flashIntegratorFeeBps` in your integration logic. **To vary fees per trade**, set the value dynamically before each order submission.
+
+## Withdraw your fees
+
+<Steps>
+  <Step title="Log in to Definitive">
+    Go to [app.definitive.fi](https://app.definitive.fi) and sign in with your Flash integrator credentials.
+  </Step>
+
+  <Step title="Connect your fee wallet">
+    Connect the EVM or Solana wallet associated with the vault you want to withdraw from.
+  </Step>
+
+  <Step title="Withdraw">
+    Click **Withdraw** and sign the transaction in your wallet to move funds from your Definitive vault to your fee wallet.
+  </Step>
+</Steps>
+
+## Track your fees
+
+Every fill returned by `GET /orders/{orderId}` includes fee fields so you can reconcile earnings programmatically.
+
+| Fill field | What it contains |
+| --- | --- |
+| `feeAmount` | Total fee for this fill (in the fee token) |
+| `feeTicker` | Token the fee was denominated in |
+| `tradeFeeAmount` | Trade-related portion of the fee |
+| `networkFeeAmount` | Network/gas portion of the fee |
+| `feeNotional` | Total fee in notional (USD) terms |
+
+## Quick reference
+
+| Question | Answer |
+| --- | --- |
+| Where do I set my fee? | `flashIntegratorFeeBps` on `POST /quote` and/or `POST /order` |
+| Can I change my fee per trade? | Yes. Set it on each order individually. |
+| What if I omit the fee parameter? | No integrator fee is charged for that order. |
+| Where do fees accumulate? | Your Definitive vault, controlled by your connected wallet. |
+| How do I withdraw? | Sign in at [app.definitive.fi](https://app.definitive.fi), connect your wallet, click Withdraw. |
+
+<CardGroup cols={2}>
+  <Card title="Become an Integrator" icon="key" href="/getting-started">
+    Set up your integrator account and API key.
+  </Card>
+  <Card title="Order endpoint" icon="paper-plane" href="/api-reference/flash/order">
+    Full parameter reference for `POST /order`, including `flashIntegratorFeeBps`.
+  </Card>
+</CardGroup>
