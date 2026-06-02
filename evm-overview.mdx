@@ -87,15 +87,9 @@ You can set slippage tolerance on the quote request via `maxSlippage` (e.g., `"0
 
 Flash routes every order through a smart order router that aggregates 200+ DEXs and offchain market makers. Before submitting any transaction onchain, Flash simulates the swap offchain to detect malicious or compromised liquidity pools and to optimize for best execution.
 
-Orders are submitted through private channels to prevent front-running and sandwich attacks. Auto-slippage optimization is built into the execution pipeline, not an optional add-on.
+Orders are submitted through private channels to prevent front-running and sandwich attacks. Auto-slippage optimization is built into the execution pipeline.
 
 <CardGroup cols={2}>
-  <Card title="Quote endpoint" icon="bolt" href="/api-reference/flash/quote">
-    Full parameter reference for `POST /quote`.
-  </Card>
-  <Card title="Order endpoint" icon="paper-plane" href="/api-reference/flash/order">
-    Full parameter reference for `POST /order`.
-  </Card>
   <Card title="Solana Overview" icon="circle-nodes" href="/solana-overview">
     How quoting, delegation, and signing work on Solana.
   </Card>
