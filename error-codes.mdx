@@ -1,0 +1,36 @@
+---
+title: Error Codes
+description: HTTP status codes returned by the Flash API and the error response shape.
+---
+
+# Error Codes
+
+Every Flash endpoint returns the same set of error status codes. Errors share a common JSON shape:
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string",
+    "details": null
+  }
+}
+```
+
+`code` and `message` are always present. `details` is optional and may be null.
+
+## Status codes
+
+| Status | Meaning |
+| --- | --- |
+| `400` | Invalid request parameters |
+| `401` | Authentication failed |
+| `403` | Permission denied |
+| `404` | Resource not found |
+| `422` | Resource state prevents the requested operation |
+| `429` | Rate limit exceeded (per-key request throttling) |
+| `500` | Internal server error |
+| `503` | Service temporarily unavailable |
+| `504` | Gateway timeout |
+
+For `429` handling, see [Rate Limits](/rate-limits).
