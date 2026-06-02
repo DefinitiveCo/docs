@@ -32,15 +32,28 @@
         "tab": "Overview",
         "groups": [
           {
-            "group": "Flash",
+            "group": "Get Started",
             "pages": [
               "index",
               "getting-started",
-              "monetizing-your-integration",
-              "supported-chains",
-              "rate-limits",
+              "monetizing-your-integration"
+            ]
+          },
+          {
+            "group": "How It Works",
+            "pages": [
+              "non-custodial",
+              "evm-overview",
+              "solana-overview",
               "security",
               "faq"
+            ]
+          },
+          {
+            "group": "Specifications",
+            "pages": [
+              "supported-chains",
+              "rate-limits"
             ]
           }
         ]

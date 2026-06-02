@@ -1,0 +1,105 @@
+---
+title: "EVM Overview"
+description: "How quoting, routing, token approvals, and signing work for Flash orders on EVM chains."
+---
+
+Flash API supports advanced orders for any ERC-20 token on 11 EVM chains: Ethereum, Base, Arbitrum, Avalanche, Blast, BNB Chain, HyperEVM, Monad, Optimism, Plasma, and Polygon. Aggregated liquidity across 200+ DEXs and liquidity sources feeds the Flash smart order router.
+
+This page walks through how quoting, routing, and signing work on EVM at a high level. For the full endpoint reference, see [Quote](/api-reference/flash/quote) and [Order](/api-reference/flash/order).
+
+## EVM order flow
+
+Every EVM order follows four steps: quote, approve, sign, submit. The user's wallet must authorize every action. Flash never takes custody of funds.
+
+<Steps>
+  <Step title="Get a quote">
+    Call `POST /quote` with the asset pair (`targetAsset` / `contraAsset` and their `targetChain` / `contraChain`, same-chain only), `side` (`buy` or `sell`), `qty` (a decimal string in the spent asset's units: `contraAsset` on a buy, `targetAsset` on a sell), and `orderType`. Flash's smart order router evaluates routes across 200+ DEXs and liquidity sources and returns the best pricing.
+
+    The response includes:
+
+    - `quoteId`: reference ID to lock this pricing on submit
+    - `from` / `to`: the spent and received legs, each with `asset` (`target` or `contra`), `amount`, and `notional`
+    - `fees.estimatedFeeNotional`: total fee (gas, trading, integrator) in USD notional
+    - `evm.orderTypedData`: the EIP-712 payload the user must sign
+    - `evm.approveTx` *(conditional)*: a token allowance transaction, included when the existing Permit2 allowance for the spent asset is insufficient
+    - `evm.permitTypedData` *(conditional)*: a Permit2 typed-data payload for gasless approval
+
+  </Step>
+
+  <Step title="Handle token approval (one-time per token)">
+    If the quote response includes `evm.approveTx`, the `funderAddress` must submit this transaction onchain before the order can execute. This grants allowance for Flash to pull the spent asset (the `contraAsset` on a buy).
+
+    This is a standard ERC-20 approval and is required once per token per wallet. After the approval transaction lands onchain, future orders for the same token skip this step.
+
+    <Note>
+      The approval transaction (`evm.approveTx`) and the order signature (`evm.orderTypedData`) cannot be batched into a single user interaction. The approval is an onchain transaction that costs gas. The order signature is a gasless offchain signature. They are separate actions by design.
+    </Note>
+
+  </Step>
+
+  <Step title="Sign the order payload">
+    The user signs `evm.orderTypedData` using EIP-712 `signTypedData`. This produces the `userSignature` that authorizes Flash to execute the trade on behalf of the user's wallet.
+
+    ```ts
+    import { privateKeyToAccount } from "viem/accounts";
+
+    const account = privateKeyToAccount("0x...");
+    const { domain, types, primaryType, message } = JSON.parse(quote.evm.orderTypedData);
+    const userSignature = await account.signTypedData({ domain, types, primaryType, message });
+    ```
+
+    **If the quote returned `evm.permitTypedData`**, sign it the same way and pass the result as `evmPermitSignature` on submit. Echo `evmPermitTypedData` back unchanged. The `permitTypedData.spender` is scoped to the Definitive Flash settlement contract for that specific chain, not a generic Permit2 contract.
+
+  </Step>
+
+  <Step title="Submit the order">
+    Call `POST /order` with the original trade parameters plus `funderAddress`, `quoteId`, `userSignature`, and `evmOrderTypedData` (echoed back unchanged). If Permit2 was used, also include `evmPermitTypedData` and `evmPermitSignature`. The deadline is encoded inside `evmOrderTypedData`, so no separate deadline field is needed.
+
+    Flash handles gas, MEV protection, simulation, and onchain landing. The response returns an `orderId` for tracking.
+  </Step>
+</Steps>
+
+## Smart wallet support
+
+Flash accepts **EIP-1271 smart-wallet signatures** on all EVM chains. This means integrators can use smart contract wallets (multi-sigs, MPC wallets, embedded wallets) as the `funderAddress`, not just EOAs.
+
+**Coinbase Smart Wallet sub-accounts** are supported. Set `funderAddress` to the sub-account address directly, and the sub-account itself signs `orderTypedData` (returning a valid EIP-1271 signature). The parent Coinbase Smart Wallet does not need to sign on the sub-account's behalf.
+
+Supported wallet types include EOAs, Fireblocks, Fordefi, Coinbase Smart Wallet (including sub-accounts), and any wallet that implements EIP-1271.
+
+## Slippage and price protection
+
+You can set slippage tolerance on the quote request via `maxSlippage` (e.g., `"0.05"` = 5%, the default). Flash enforces slippage offchain through its execution engine (the keeper), not through the settlement contract. The signed `FlashOrder` payload does not contain a minimum-output amount, so price protection is applied when the swap is built and submitted:
+
+| Order type | How price is protected |
+| --- | --- |
+| **Market** | The keeper computes a minimum-output amount from `maxSlippage` and injects it into the swap calldata at submission. If the swap cannot meet it, the transaction reverts and no funds move. |
+| **Limit** | The limit price is the binding constraint. The order only fills at or better than the limit price. |
+| **Stop, Stop Loss, Take Profit, TWAP, Bracket** | These execute at a future time, so the keeper re-evaluates pricing at execution and applies an execution-time slippage schedule bounded by `maxSlippage` / `maxPriceImpact`. |
+
+`maxSlippage` is a quote-time parameter and is not part of the signed `FlashOrder` struct.
+
+<Note>
+  Flash orders must be signed by a standard wallet signer: an EOA signing with its ECDSA key, or a smart-contract wallet producing an EIP-1271 signature. Owners of a multisig that cannot produce an EIP-1271 order signature should trade from a dedicated wallet (or a future delegate-registration flow) rather than the multisig address itself.
+</Note>
+
+## Routing and MEV protection
+
+Flash routes every order through a smart order router that aggregates 200+ DEXs and offchain market makers. Before submitting any transaction onchain, Flash simulates the swap offchain to detect malicious or compromised liquidity pools and to optimize for best execution.
+
+Orders are submitted through private channels to prevent front-running and sandwich attacks. Auto-slippage optimization is built into the execution pipeline, not an optional add-on.
+
+<CardGroup cols={2}>
+  <Card title="Quote endpoint" icon="bolt" href="/api-reference/flash/quote">
+    Full parameter reference for `POST /quote`.
+  </Card>
+  <Card title="Order endpoint" icon="paper-plane" href="/api-reference/flash/order">
+    Full parameter reference for `POST /order`.
+  </Card>
+  <Card title="Solana Overview" icon="circle-nodes" href="/solana-overview">
+    How quoting, delegation, and signing work on Solana.
+  </Card>
+  <Card title="Supported Chains" icon="link" href="/supported-chains">
+    Full chain and asset coverage.
+  </Card>
+</CardGroup>

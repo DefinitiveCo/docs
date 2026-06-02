@@ -1,0 +1,50 @@
+---
+title: "Non-Custodial"
+description: "Definitive Flash API never takes custody of your users' funds, even for conditional trade orders. Here is how advanced orders work on Flash while remaining fully non-custodial."
+---
+
+Definitive Flash API executes advanced order types (Limit, TWAP, Stop Loss, Take Profit, Bracket) without ever taking custody of user funds. Tokens stay in the user's wallet until the exact moment a trade executes, and if it fails they never move. There is no intermediate holding period, no fund transfers to a separate account, and no shared pools.
+
+This is different from other trading APIs that require users to move funds into a smart contract or wallet before placing advanced orders.
+
+Here is how it works at a high level:
+
+- **Approve once.** The user grants a one-time onchain approval (ERC-20 on EVM, token delegate on Solana) that lets Flash pull a specific token.
+- **Sign per order.** The user signs an offchain payload authorizing each individual trade, which Flash holds and monitors against the market.
+- **Execute atomically.** When the order's conditions are met, Flash pulls the funds, swaps, and settles the output back to the wallet in a single transaction. If it cannot execute, funds never leave the wallet.
+- **Cancel anytime.** The user can cancel any open order by signing a cancel message, which removes the open order from Flash's system.
+
+## Token approval (onchain, one-time)
+
+Before Flash can move a token, the user grants a one-time onchain approval that lets Flash pull it: a standard ERC-20 `approve` transaction on EVM, or a token delegate on Solana. By default this is set to unlimited so the user only needs to approve once per token; integrators who want an extra layer of safety can scope it to the exact order amount instead.
+
+The approval alone does not allow Flash to move funds. Every trade also requires a signed order payload (see below) that specifies the exact amount and a deadline verified onchain. The order signature, not the approval amount, is what prevents overspending.
+
+## Order signature (offchain, per order)
+
+For each order, the user signs an offchain payload that commits to the specific trade: the token pair, the exact amount, the recipient, and an expiration deadline. On EVM this is an EIP-712 typed-data payload (`orderTypedData`); on Solana it is an Ed25519 message (`svm.orderMessage`). The signature is gasless and is passed back as `userSignature` on submit. Conditional parameters such as a limit price, TWAP schedule, or trigger price are held offchain by Flash's execution engine and are not embedded in the signature.
+
+The signed order is the primary security control. It caps the amount Flash can pull to exactly what the order specifies and includes an expiration verified onchain (by the settlement contract on EVM, by Flash's program on Solana). Even with an unlimited approval or delegate, Flash cannot execute a swap for more than the signed order authorizes, and cannot execute after the deadline has passed.
+
+Flash stores this signed payload in its execution system. For a market order, execution is immediate. For a limit order, TWAP, or other conditional order, Flash's trading engine continuously evaluates market pricing. When the order's conditions are met, Flash submits a transaction that pulls the authorized tokens from the user's wallet, executes the swap through the best available route with a minimum-output bound applied by Flash's execution engine, and settles the output tokens back to the user's wallet.
+
+This happens atomically in a single transaction. If the swap cannot fill within the order's price protection (for example, slippage would exceed the bound on a market order, or a limit price cannot be met), the transaction reverts and no funds move.
+
+## Why this matters for conditional orders
+
+Limit orders, TWAPs, and other conditional orders may sit open for minutes, days, or weeks before conditions are met. During that entire period, the user's tokens remain in their own wallet. They are visible in the wallet's balance. They can be used elsewhere (though doing so may cause the Flash order to fail if the balance is insufficient at execution time).
+
+Flash's limit orders are held offchain, not exposed onchain. This means they are not visible to MEV bots or other market participants before execution. When a limit order finally fires, it appears onchain as a standard swap, making it significantly harder to front-run compared to protocols that post limit orders onchain.
+
+## Cancellation
+
+The user can cancel any open order at any time by signing a cancel message: an EIP-191 `personal_sign` message on EVM, or an Ed25519 message on Solana. Flash removes the signed order payload from its execution system. The onchain approval or delegate remains in place since it is reusable for future orders, but without a valid signed payload Flash cannot execute any trade. On Solana, the user can additionally revoke the token delegate authority onchain at any time, which immediately prevents Flash from pulling funds regardless of any outstanding signed payloads.
+
+<CardGroup cols={2}>
+  <Card title="EVM Overview" icon="cube" href="/evm-overview">
+    How quoting, routing, and signing work on EVM.
+  </Card>
+  <Card title="Security & Audits" icon="shield-halved" href="/security">
+    Audit reports, MEV protection, and platform architecture.
+  </Card>
+</CardGroup>
