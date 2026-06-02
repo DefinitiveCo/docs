@@ -1,0 +1,36 @@
+---
+title: Order Statuses
+description: The order statuses returned by Flash, which ones are cancellable, and how orders transition between them.
+---
+
+# Order Statuses
+
+Flash defines eight order statuses. They appear in the responses of the Cancel Order, Get Order Details, and List Orders endpoints.
+
+## Available statuses
+
+| Status | Description |
+| --- | --- |
+| `ORDER_STATUS_UNSPECIFIED` | Default/unspecified status |
+| `ORDER_STATUS_PENDING` | Order is pending and waiting to be processed |
+| `ORDER_STATUS_ACCEPTED` | Order has been accepted and is being processed |
+| `ORDER_STATUS_PARTIALLY_FILLED` | Order has been partially filled |
+| `ORDER_STATUS_FILLED` | Order has been completely filled |
+| `ORDER_STATUS_CANCELLED` | Order has been cancelled |
+| `ORDER_STATUS_REJECTED` | Order was rejected |
+| `ORDER_STATUS_TERMINATED` | Order has been terminated |
+
+## Cancellable statuses
+
+Three statuses permit cancellation: `ORDER_STATUS_PENDING`, `ORDER_STATUS_ACCEPTED`, and `ORDER_STATUS_PARTIALLY_FILLED`.
+
+## Non-cancellable statuses
+
+Four statuses prevent cancellation: `ORDER_STATUS_FILLED`, `ORDER_STATUS_CANCELLED`, `ORDER_STATUS_REJECTED`, and `ORDER_STATUS_TERMINATED`.
+
+## Status transitions
+
+Orders progress through two typical flows:
+
+- **Filled:** `ORDER_STATUS_PENDING` → `ORDER_STATUS_ACCEPTED` → `ORDER_STATUS_PARTIALLY_FILLED` → `ORDER_STATUS_FILLED`
+- **Not filled:** `ORDER_STATUS_PENDING` → `ORDER_STATUS_ACCEPTED` → `ORDER_STATUS_CANCELLED` / `ORDER_STATUS_REJECTED` / `ORDER_STATUS_TERMINATED`

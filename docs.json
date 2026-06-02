@@ -15,7 +15,7 @@
     "auth": {
       "method": "key",
       "name": "x-definitive-api-key",
-      "default": "dpka_2bd021e7_6458_4042_9f20_b01c9a95c2a4"
+      "default": "dpka_b8f185b6_0653_49ff_b683_048ec821a2b8"
     },
     "examples": {
       "autogenerate": true,
@@ -32,7 +32,7 @@
         "tab": "Overview",
         "groups": [
           {
-            "group": "Get Started",
+            "group": "Getting Started",
             "pages": [
               "index",
               "getting-started",
@@ -40,11 +40,12 @@
             ]
           },
           {
-            "group": "How It Works",
+            "group": "How Flash Works",
             "pages": [
               "non-custodial",
               "evm-overview",
               "solana-overview",
+              "placing-orders",
               "security",
               "faq"
             ]
@@ -53,7 +54,9 @@
             "group": "Specifications",
             "pages": [
               "supported-chains",
-              "rate-limits"
+              "rate-limits",
+              "order-statuses",
+              "error-codes"
             ]
           }
         ]
