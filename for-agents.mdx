@@ -37,6 +37,10 @@ Three steps: quote → sign → submit. The walkthrough below covers EVM chains.
 
 `POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset` (with matching `targetChain` / `contraChain` — same-chain only), `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`.
 
+<Note>
+Native assets cannot be swapped directly. Wrap them into their tokenized equivalent first (for example WETH on EVM chains, or WSOL on Solana), then reference that token by address.
+</Note>
+
 Returns:
 
 - `quoteId` — echo back on submit to lock pricing

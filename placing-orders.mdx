@@ -13,6 +13,10 @@ Flash API uses a target/contra framework to define every trade. Understanding th
 
 Both legs of the pair must be on the same chain, so `targetChain` and `contraChain` are the same value. Assets are always referenced by address, not symbol.
 
+<Note>
+Native assets cannot be swapped directly. Wrap them into their tokenized equivalent first (for example WETH on EVM chains, or WSOL on Solana), then reference that token by address in your order.
+</Note>
+
 ## How `qty` works
 
 The meaning of `qty` depends on the `side` of the trade. It is always the amount of the asset being spent:
