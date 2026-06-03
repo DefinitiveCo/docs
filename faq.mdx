@@ -63,6 +63,10 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
   <Accordion title="Can I trade RWAs (real-world assets) like tokenized gold?">
     Yes. As long as the RWA token is on a supported chain and has on-chain liquidity, we'll have a quote for it.
   </Accordion>
+
+  <Accordion title="Can I swap native assets like ETH or SOL directly?">
+    No. Swapping native assets is not supported. Native assets must be wrapped into their tokenized equivalent before trading (for example, wrap ETH into WETH on EVM chains, or SOL into WSOL on Solana), and then referenced by token address in your order.
+  </Accordion>
 </AccordionGroup>
 
 ## Integration & Testing
