@@ -26,6 +26,10 @@ For each order, the user signs an offchain payload that commits to the specific 
 
 The signed order is the primary security control. It caps the amount Flash can pull to exactly what the order specifies and includes an expiration verified onchain (by the settlement contract on EVM, by Flash's program on Solana). Even with an unlimited approval or delegate, Flash cannot execute a swap for more than the signed order authorizes, and cannot execute after the deadline has passed.
 
+<Note>
+A Flash order signature authorizes an input debit, not a guaranteed receive amount. It binds the token, total amount, recipient, and deadline that Flash may pull from the wallet, but it does not encode a minimum output. A single signed order may also be filled across more than one transaction, each drawing part of the authorized total, so one signature can authorize multiple onchain debits up to the signed amount. Integrators should treat the signature as authorization to spend the input, and rely on Flash's offchain execution controls (not the signature) for output protection.
+</Note>
+
 Flash stores this signed payload in its execution system. For a market order, execution is immediate. For a limit order, TWAP, or other conditional order, Flash's trading engine continuously evaluates market pricing. When the order's conditions are met, Flash submits a transaction that pulls the authorized tokens from the user's wallet, executes the swap through the best available route with a minimum-output bound applied by Flash's execution engine, and settles the output tokens back to the user's wallet.
 
 This happens atomically in a single transaction. If the swap cannot fill within the order's price protection (for example, slippage would exceed the bound on a market order, or a limit price cannot be met), the transaction reverts and no funds move.
