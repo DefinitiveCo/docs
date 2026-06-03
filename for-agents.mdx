@@ -35,7 +35,7 @@ Three steps: quote → sign → submit. The walkthrough below covers EVM chains.
 
 ### 1. Get a quote
 
-`POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset` (with matching `targetChain` / `contraChain` — same-chain only), `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`.
+`POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset` (with matching `targetChain` / `contraChain` — same-chain only), `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`. If you charge an integrator fee, include `flashIntegratorFeeBps` and send the same value on `POST /order`.
 
 <Note>
 Native assets cannot be swapped directly. Wrap them into their tokenized equivalent first (for example WETH on EVM chains, or WSOL on Solana), then reference that token by address.
@@ -69,7 +69,7 @@ const userSignature = await account.signTypedData({ domain, types, primaryType, 
 
 ### 3. Submit the order
 
-`POST /order` — executes the swap. Pass the same fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, `userSignature` from step 2, and `evmOrderTypedData` (echo of `quote.evm.orderTypedData`). If Permit2 was used, also include `evmPermitTypedData` (echo of `quote.evm.permitTypedData`) and `evmPermitSignature`. The EVM deadline is encoded inside `evmOrderTypedData` — no separate deadline field needed.
+`POST /order` — executes the swap. Pass the same fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, `userSignature` from step 2, and `evmOrderTypedData` (echo of `quote.evm.orderTypedData`). If you included `flashIntegratorFeeBps` on the quote, include the same string value here. If Permit2 was used, also include `evmPermitTypedData` (echo of `quote.evm.permitTypedData`) and `evmPermitSignature`. The EVM deadline is encoded inside `evmOrderTypedData` — no separate deadline field needed.
 
 Returns an `orderId`.
 

@@ -7,22 +7,36 @@ As an integrator, you can collect a fee on every trade Flash executes on behalf 
 
 ## How it works
 
-When you call Flash, include the `flashIntegratorFeeBps` parameter. Flash deducts your fee from the trade output and routes it to the Definitive vault controlled by your fee wallet.
+When you call Flash, include the `flashIntegratorFeeBps` parameter on both `POST /quote` and `POST /order`. Choose the fee before quoting, then submit the same string value with the signed order. Flash deducts your fee from the trade output and routes it to the Definitive vault controlled by your fee wallet.
 
 | Concept | Detail |
 | --- | --- |
 | **Parameter** | `flashIntegratorFeeBps` |
 | **Format** | String, in basis points. `"50"` = 0.50%, `"100"` = 1.00%. |
 | **Where it goes** | Your Definitive vault, owned by the fee wallet connected to your integrator account. |
-| **When to set it** | Optional on `POST /quote` (to preview fees in the quote) and on `POST /order` (where it actually applies). |
+| **When to set it** | On `POST /quote` and `POST /order`, with the same value on both calls. |
 
-<Note>
-  You can specify `flashIntegratorFeeBps` at quote time so the quote response reflects your fee, or set it only at order time. If omitted on `POST /order`, no integrator fee is charged for that order.
-</Note>
+## Set your fee on quote and order
 
-## Set your fee on every order
+Pass `flashIntegratorFeeBps` as a string when calling `POST /quote`. Example: buying WETH with 100 USDC on Base with a 50 bps fee.
 
-Pass `flashIntegratorFeeBps` as a string when calling `POST /order`. Example: buying WETH with 100 USDC on Base with a 50 bps fee.
+```bash cURL
+curl -X POST https://ddp.definitive.fi/v2/flash/quote \
+  -H "x-definitive-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "targetChain": "base",
+    "contraChain": "base",
+    "targetAsset": "0x4200000000000000000000000000000000000006",
+    "contraAsset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "side": "buy",
+    "qty": "100",
+    "orderType": "market",
+    "flashIntegratorFeeBps": "50"
+  }'
+```
+
+After the user signs the quote payload, submit the order with the same `flashIntegratorFeeBps` value.
 
 ```bash cURL
 curl -X POST https://ddp.definitive.fi/v2/flash/order \
@@ -44,7 +58,7 @@ curl -X POST https://ddp.definitive.fi/v2/flash/order \
   }'
 ```
 
-**To use the same fee on every trade**, hardcode `flashIntegratorFeeBps` in your integration logic. **To vary fees per trade**, set the value dynamically before each order submission.
+**To use the same fee on every trade**, hardcode `flashIntegratorFeeBps` in your integration logic and send it on both calls. **To vary fees per trade**, choose the value before `POST /quote` and reuse it unchanged on `POST /order`.
 
 ## Withdraw your fees
 
@@ -78,7 +92,7 @@ Every fill returned by `GET /orders/{orderId}` includes fee fields so you can re
 
 | Question | Answer |
 | --- | --- |
-| Where do I set my fee? | `flashIntegratorFeeBps` on `POST /quote` and/or `POST /order` |
+| Where do I set my fee? | `flashIntegratorFeeBps` on `POST /quote` and `POST /order` |
 | Can I change my fee per trade? | Yes. Set it on each order individually. |
 | What if I omit the fee parameter? | No integrator fee is charged for that order. |
 | Where do fees accumulate? | Your Definitive vault, controlled by your connected wallet. |
