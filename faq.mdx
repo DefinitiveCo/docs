@@ -72,6 +72,10 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
 ## Integration & Testing
 
 <AccordionGroup>
+  <Accordion title="How do I set an integrator fee?">
+    Set `flashIntegratorFeeBps` on `POST /quote`, then submit the same string value on `POST /order`.
+  </Accordion>
+
   <Accordion title="Is there a sandbox or testnet environment?">
     We recommend testing on a production chain like Base or Solana using small amounts. We've found this is more reliable than testnets, which often have inaccurate gas behavior and omit nuances of live trading.
   </Accordion>

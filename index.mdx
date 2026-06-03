@@ -70,7 +70,7 @@ Most aggregators stop at Market. Flash is the only API that ships advanced order
     The user signs the EIP-712 (EVM) or SPL (Solana) payload offchain.
   </Step>
   <Step title="Land">
-    Submit the signed payload to `/order`. Flash handles gas, MEV protection, simulation, and onchain landing.
+    Submit the signed payload to `/order`, including the same `flashIntegratorFeeBps` value used for the quote. Flash handles gas, MEV protection, simulation, and onchain landing.
   </Step>
 </Steps>
 
