@@ -100,6 +100,10 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
     Yes. Flash supports EIP-1271 signatures, so smart contract wallets that can produce an EIP-1271 signature (for example Safe and account-abstraction wallets) can sign and place orders.
   </Accordion>
 
+  <Accordion title="What is the vault address in the EVM FlashOrder EIP-712 payload, and do I need to set or track it?">
+    That's the Definitive vault for your account, and there's one vault per chain. The quote response fills it in, and you sign what's returned. You don't need to set or track the vault address on your side.
+  </Accordion>
+
   <Accordion title="Does the approval transaction need to come from the funderAddress?">
     Yes. The on-chain ERC-20 approval must be sent from the `funderAddress` specified in the order. This is a one-time transaction per user per token.
   </Accordion>
