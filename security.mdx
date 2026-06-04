@@ -17,7 +17,7 @@ Orders are routed through private channels to prevent front-running and sandwich
 
 Orders require a cryptographic signature from the funder wallet:
 - **EVM chains**: EIP-712 typed-data signature over `evm.orderTypedData` returned in the quote response.
-- **SVM chains**: 64-byte Ed25519 signature over `svm.signedMessage` returned in the quote response.
+- **SVM chains**: 64-byte Ed25519 signature over `svm.orderMessage` returned in the quote response.
 
 Only the wallet owner can authorize swaps of their funds. No third party can submit an order on behalf of a wallet without a valid signature.
 
