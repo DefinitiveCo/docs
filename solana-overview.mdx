@@ -1,8 +1,102 @@
 ---
 title: "Solana Overview"
-description: "Advanced order support for Solana."
+description: "How quoting, routing, delegation, and signing work for Flash orders on Solana."
 ---
 
-<Info icon="clock">
-  **Solana support is coming soon.**
-</Info>
+Flash API supports advanced orders for any SPL token on Solana, including Token-2022 mints. Aggregated liquidity across Solana's DEXs and liquidity sources feeds the Flash smart order router.
+
+This page walks through how quoting, routing, and signing work on Solana at a high level. For the full endpoint reference, see [Quote](/api-reference/flash/quote) and [Order](/api-reference/flash/order).
+
+## Solana order flow
+
+Every Solana order follows four steps: quote, delegate, sign, submit. The user's wallet must authorize every action. Flash never takes custody of funds.
+
+<Steps>
+  <Step title="Get a quote">
+    Call `POST /quote` with the asset pair (`targetAsset` / `contraAsset` as base58 mint addresses, with `targetChain` and `contraChain` both set to `solana`, same-chain only), `side` (`buy` or `sell`), `qty` (a decimal string in the spent asset's units: `contraAsset` on a buy, `targetAsset` on a sell), and `orderType`. Pass `funderAddress` (your base58 wallet address) so Flash can build the signing payloads. Flash's smart order router evaluates routes across Solana liquidity sources and returns the best pricing.
+
+    The response includes:
+
+    - `quoteId`: reference ID to lock this pricing on submit
+    - `from` / `to`: the spent and received legs, each with `asset` (`target` or `contra`), `amount`, and `notional`
+    - `fees.estimatedFeeNotional`: total fee (gas, trading, integrator) in USD notional
+    - `svm.orderMessage`: the UTF-8 message the user must Ed25519-sign
+    - `svm.nonce` and `svm.deadline`: order nonce and Unix-seconds expiry, echoed back at submit so the program can rebuild the signed message
+    - `svm.delegateIx` *(conditional)*: a Solana instruction granting the Flash program delegate authority over the spent token, included when the existing delegation is insufficient
+    - `svm.sponsoredDelegateTx` *(conditional)*: a sponsor-paid alternative to `delegateIx` (see below)
+
+    On Solana quotes the `evm` block is always null.
+
+  </Step>
+
+  <Step title="Handle token delegation (one-time per token)">
+    Solana has no ERC-20 approval. Instead, Flash grants itself delegate authority over the spent token's associated token account using an SPL `Approve` instruction scoped to the Flash program. This is the Solana equivalent of an EVM token approval and is required once per token per wallet. After the delegation lands onchain, future orders for the same token skip this step.
+
+    The quote returns the delegation in one of two mutually exclusive forms:
+
+    - `svm.delegateIx`: a raw instruction. Wrap it in a transaction, sign it with your funder wallet, and submit it to Solana yourself. You pay the network fee.
+    - `svm.sponsoredDelegateTx`: a base64 `VersionedTransaction`. Sign it with your funder wallet and echo it back as `svmSponsoredDelegateTx` at submit. Definitive covers the network fee and broadcasts it.
+
+    When `sponsoredDelegateTx` is non-null, `delegateIx` is null, and vice versa. When both are null, the existing delegation already covers this order.
+
+    <Note>
+      The delegation and the order signature are separate actions by design. The delegation is an onchain (or sponsored) transaction that grants the Flash program authority to pull the spent token. The order signature is a gasless offchain Ed25519 signature. They cannot be batched into a single user interaction.
+    </Note>
+
+  </Step>
+
+  <Step title="Sign the order payload">
+    The user signs `svm.orderMessage` with their wallet's Ed25519 key, producing a 64-byte signature. Encode it as base58 and pass it as `userSignature`. The message is plaintext, so a wallet's message-signing flow surfaces the order's mint and amount to the user.
+
+    ```ts
+    import { Keypair } from "@solana/web3.js";
+    import nacl from "tweetnacl";
+    import bs58 from "bs58";
+
+    const keypair = Keypair.fromSecretKey(bs58.decode("..."));
+    const message = new TextEncoder().encode(quote.svm.orderMessage);
+    const signature = nacl.sign.detached(message, keypair.secretKey);
+    const userSignature = bs58.encode(signature);
+    ```
+
+    The signed message commits to the order details (input mint, total, nonce, deadline) and to the Flash program and your Definitive trading group, so it cannot be replayed against another order or program.
+
+  </Step>
+
+  <Step title="Submit the order">
+    Call `POST /order` with the original trade parameters plus `funderAddress`, `quoteId`, `userSignature`, `svmNonce`, and `svmDeadline` (echoed back unchanged from the quote). If the quote returned `svm.sponsoredDelegateTx`, also sign it and include it as `svmSponsoredDelegateTx`. The EVM-only fields (`evmOrderTypedData`, `evmPermitTypedData`, `evmPermitSignature`) must not be present on Solana submissions.
+
+    Flash handles priority fees, MEV protection, simulation, and onchain landing. The response returns an `orderId` for tracking.
+  </Step>
+</Steps>
+
+## Signer support
+
+Flash orders on Solana must be signed by a standard Ed25519 keypair. The funder wallet signs `svm.orderMessage` directly, and Flash verifies the 64-byte Ed25519 signature against the funder's public key.
+
+Multisig wallets that sign through a program-derived address cannot produce a direct Ed25519 order signature. Owners of such a multisig should trade from a dedicated wallet (or a future delegate-registration flow) rather than the multisig address itself.
+
+## Slippage and price protection
+
+You can set slippage tolerance on the quote request via `maxSlippage` (e.g., `"0.05"` = 5%, the default) and bound price impact via `maxPriceImpact` (default `"0.05"`). Flash enforces slippage offchain through its execution engine (the keeper), not through the onchain program. The signed order message does not contain a minimum-output amount, so price protection is applied when the swap is built and submitted:
+
+| Order type | How price is protected |
+| --- | --- |
+| **Market** | The keeper computes a minimum-output amount from `maxSlippage` and injects it into the settlement instruction at submission. If the swap cannot meet it, the transaction reverts and no funds move. |
+| **Limit** | The limit price is the binding constraint. The order only fills at or better than the limit price. |
+| **Stop, Stop Loss, Take Profit, TWAP, Bracket** | These execute at a future time, so the keeper re-evaluates pricing at execution and applies an execution-time slippage schedule bounded by `maxSlippage` / `maxPriceImpact`. |
+
+## Routing and MEV protection
+
+Flash routes every order through a smart order router that aggregates Solana's DEXs and liquidity sources. Before submitting any transaction onchain, Flash simulates the swap offchain to optimize for best execution and to guard against malicious or compromised liquidity.
+
+Settlement runs through the Definitive Flash Solana program: the program verifies the user's Ed25519 signature, pulls the spent token via the granted delegation, executes the swap, and routes the output and fees, all in a single atomic transaction. Orders are landed with priority fees and MEV-protected inclusion.
+
+<CardGroup cols={2}>
+  <Card title="EVM Overview" icon="circle-nodes" href="/evm-overview">
+    How quoting, routing, approvals, and signing work on EVM chains.
+  </Card>
+  <Card title="Supported Chains" icon="link" href="/supported-chains">
+    Full chain and asset coverage.
+  </Card>
+</CardGroup>
