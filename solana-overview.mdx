@@ -86,8 +86,6 @@ You can set slippage tolerance on the quote request via `maxSlippage` (e.g., `"0
 | **Limit** | The limit price is the binding constraint. The order only fills at or better than the limit price. |
 | **Stop, Stop Loss, Take Profit, TWAP, Bracket** | These execute at a future time, so the keeper re-evaluates pricing at execution and applies an execution-time slippage schedule bounded by `maxSlippage` / `maxPriceImpact`. |
 
-`maxSlippage` is a quote-time parameter and is not part of the signed order message.
-
 ## Routing and MEV protection
 
 Flash routes every order through a smart order router that aggregates Solana's DEXs and liquidity sources. Before submitting any transaction onchain, Flash simulates the swap offchain to optimize for best execution and to guard against malicious or compromised liquidity.
