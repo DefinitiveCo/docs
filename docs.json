@@ -15,7 +15,7 @@
     "auth": {
       "method": "key",
       "name": "x-definitive-api-key",
-      "default": "dpka_b8f185b6_0653_49ff_b683_048ec821a2b8"
+      "default": "dpka_513a2bd7_57a2_46d2_927b_2a3857fe271b"
     },
     "examples": {
       "autogenerate": true,
