@@ -7,15 +7,17 @@ description: "Advanced onchain trading for wallets, apps, and AI agents. One API
   **Flash is in beta.** APIs and behavior may change. Reach out to the Definitive team before relying on Flash in production.
 </Note>
 
-Flash is Definitive's trading API for **wallets, trading apps, and AI agents** that need more than a basic market swap. One integration gives your users Limit, Stop Loss, Take Profit, TWAP, DCA, and Quick Trade orders, routed across **200+ DEXs and market makers** on **12 chains**, with execution managed end to end.
+Flash is Definitive's trading API for **wallets, trading apps, and AI agents** that need more than a basic market swap. One integration gives your users Limit, Stop Loss, Take Profit, TWAP, DCA, and Quick Trade orders, routed across **200\+ DEXs and market makers** on **12 chains**, with execution managed end to end.
 
 <CardGroup cols={3}>
   <Card title="$3B+" icon="chart-line">
     Notional volume executed
   </Card>
+
   <Card title="500K+" icon="bolt">
     Trade orders landed
   </Card>
+
   <Card title="200+" icon="layer-group">
     Liquidity sources aggregated
   </Card>
@@ -29,18 +31,23 @@ Flash is Definitive's trading API for **wallets, trading apps, and AI agents** t
   <Card title="Every order type, one API" icon="shapes">
     Market, Limit, Stop Loss, Take Profit, TWAP, DCA, and Quick Trade from a single endpoint. Skip the 6-month build.
   </Card>
+
   <Card title="Smart routing" icon="route">
-    Quotes aggregated across 200+ DEXs and offchain market makers. Best route returned in one response.
+    Quotes aggregated across 200\+ DEXs and offchain market makers. Best route returned in one response.
   </Card>
+
   <Card title="Managed execution" icon="gears">
     Flash handles gas, MEV protection, simulation, and retries. You submit an intent. We land the trade.
   </Card>
+
   <Card title="Non-custodial" icon="shield-halved">
     Works with your EOA, MPC, multi-sig, or embedded smart wallet.
   </Card>
+
   <Card title="Built for agents" icon="robot">
     Stateless REST. Clean JSON. Designed to be consumed by both developers and LLMs.
   </Card>
+
   <Card title="You set the fees" icon="coins">
     Charge any `feeBps` you choose, paid to your `feeRecipient` on every fill. No integration fee.
   </Card>
@@ -66,10 +73,13 @@ Most aggregators stop at Market. Flash is the only API that ships advanced order
 
 <Steps>
   <Step title="Quote">
-    Call `/quote` with your trade parameters. Flash returns the best route across 200+ liquidity sources and a signable payload.
+    Call `/quote` with your trade parameters. Flash returns the best route across 200\+ liquidity sources and a signable payload.
   </Step>
   <Step title="Sign">
     The user signs the EIP-712 (EVM) or SPL (Solana) payload offchain.
+  </Step>
+  <Step title="Land">
+    Submit the signed payload to `/order`. Flash handles gas, MEV protection, simulation, and onchain landing.
   </Step>
   <Step title="Land">
     Submit the signed payload to `/order`, including the same `flashIntegratorFeeBps` value used for the quote. Flash handles gas, MEV protection, simulation, and onchain landing.
@@ -92,6 +102,7 @@ Flash is stateless, REST-based, and JSON-native. Agents submit an intent. Flash 
   <Card title="Agentic Trading Quickstart" icon="robot" href="/for-agents">
     Two-step flow for agents to quote and place a trade.
   </Card>
+
   <Card title="llms.txt" icon="file-lines" href="/llms.txt">
     LLM-optimized documentation index for RAG and AI consumption.
   </Card>
@@ -103,12 +114,15 @@ Flash is stateless, REST-based, and JSON-native. Agents submit an intent. Flash 
   <Card title="Become an Integrator" icon="key" href="/getting-started">
     Provision your own API key in under a minute.
   </Card>
+
   <Card title="Quote endpoint" icon="bolt" href="/api-reference/flash/quote">
     Request real-time pricing and a signable payload.
   </Card>
+
   <Card title="Order endpoint" icon="paper-plane" href="/api-reference/flash/order">
     Submit a signed quote for MEV-protected execution.
   </Card>
+
   <Card title="Supported Chains" icon="link" href="/supported-chains">
     All 12 chains and asset coverage.
   </Card>

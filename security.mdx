@@ -21,7 +21,10 @@ Flash is built on Definitive's institutional-grade trading infrastructure. Every
 
 ## Audits
 
-Flash's smart contracts were completed with no major findings: 
+Flash's smart contracts were completed with no major findings:
+
+- [EVM Audit](https://github.com/DefinitiveCo/definitive-public/blob/main/audits/Definitive%20Flash%20EVM%20Audit.pdf)
+- Solana Audit (coming soon)
 
 Additionally, Definitive's smart contracts (the same trade engine that powers Flash) have been audited multiple times by leading security firms, including Zellic, OtterSec, and Cantina. All audits have been completed with no material findings and are publicly available at [docs.definitive.fi/references/audits](https://docs.definitive.fi/references/audits).
 
@@ -51,7 +54,7 @@ Multiple layers of MEV protection are built into the execution pipeline:
 
 **Pre-execution simulation.** Before submitting any transaction onchain, Flash simulates the swap offchain to detect malicious or compromised liquidity pools.
 
-**Private submission.** Orders are submitted through private channels, preventing front-running and sandwich attacks by keeping trade intent out of the public mempool. 
+**Private submission.** Orders are submitted through private channels, preventing front-running and sandwich attacks by keeping trade intent out of the public mempool.
 
 **Slippage optimization.** Flash re-evaluates pricing at execution time and applies tight slippage to make sandwich attacks economically unfeasible.
 
