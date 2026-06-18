@@ -1,32 +1,68 @@
 ---
-title: Security
-description: Security measures, audit status, and responsible disclosure for the Flash API.
+title: "Security"
+description: "Security measures, audits, and how Flash's trade engine protects your assets and trade execution"
 ---
 
-# Security
+Flash is built on Definitive's institutional-grade trading infrastructure. Every design decision puts the protection of both user funds and trade execution quality first.
 
-## API Key Security
+<CardGroup cols={3}>
+  <Card title="$3B+" icon="chart-line">
+    Notional spot volume executed
+  </Card>
 
-Flash requires an api key passed via the `x-definitive-api-key` header.
+  <Card title="100+" icon="building-columns">
+    Institutions onboarded
+  </Card>
 
-## MEV Protection
-
-Orders are routed through private channels to prevent front-running and sandwich attacks. This ensures that swaps are executed without being exploited by MEV bots monitoring the public mempool.
-
-## Order Signing
-
-Orders require a cryptographic signature from the funder wallet:
-- **EVM chains**: EIP-712 typed-data signature over `evm.orderTypedData` returned in the quote response.
-- **SVM chains**: 64-byte Ed25519 signature over `svm.orderMessage` returned in the quote response.
-
-Only the wallet owner can authorize swaps of their funds. No third party can submit an order on behalf of a wallet without a valid signature.
+  <Card title="100K+" icon="users">
+    Traders onboarded
+  </Card>
+</CardGroup>
 
 ## Audits
 
-<Note>
-Audit reports will be published here when available.
-</Note>
+Flash's smart contracts were completed with no major findings: 
 
-## Responsible Disclosure
+Additionally, Definitive's smart contracts (the same trade engine that powers Flash) have been audited multiple times by leading security firms, including Zellic, OtterSec, and Cantina. All audits have been completed with no material findings and are publicly available at [docs.definitive.fi/references/audits](https://docs.definitive.fi/references/audits).
 
-If you discover a security vulnerability, please email security@definitive.fi. 
+## Non-custodial by design
+
+Flash never takes custody of user funds. Tokens remain in the user's wallet until the exact moment a trade executes (even for triggered/conditional orders). There is no intermediate holding period, no fund transfers to a separate account, and no shared pools.
+
+This applies to every order type, including conditional orders (Limit, TWAP, Stop Loss, Take Profit, Bracket) that may sit open for days or weeks before execution. During that entire period, the user's tokens remain in their wallet and are visible in their balance.
+
+For a detailed walkthrough of how this works on EVM and Solana, see the [Non-Custodial](/non-custodial) page.
+
+## Trade order signing
+
+Every Flash trade requires two independent authorizations from the user's wallet. Neither alone is sufficient to move funds.
+
+**Layer 1: Onchain approval (one-time per token).** The user grants Flash permission to move a specific token. On EVM, this is a standard ERC-20 approval to the Flash settlement contract. On Solana, this is an SPL token delegation granting the Flash program delegate authority over the spent token's associated token account.
+
+**Layer 2: Offchain order signature (per order).** For each trade, the user signs an offchain payload that authorizes the exact amount and includes an expiration deadline. On EVM, this is an EIP-712 typed-data signature (`evm.orderTypedData`). On Solana, this is an Ed25519 signature over `svm.orderMessage`.
+
+The order signature is a key security control that caps the amount Flash can pull to exactly what the order specifies. Flash cannot execute a swap for more than the signed order authorizes, and cannot execute after the deadline has passed.
+
+## MEV protection
+
+Multiple layers of MEV protection are built into the execution pipeline:
+
+**Offchain order intent.** All Flash trade orders are held offchain and are not visible to MEV bots or other market participants before execution. This mitigates front-running and other malicious attacks compared to protocols that publicize trades in public mempools.
+
+**Pre-execution simulation.** Before submitting any transaction onchain, Flash simulates the swap offchain to detect malicious or compromised liquidity pools.
+
+**Private submission.** Orders are submitted through private channels, preventing front-running and sandwich attacks by keeping trade intent out of the public mempool. 
+
+**Slippage optimization.** Flash re-evaluates pricing at execution time and applies tight slippage to make sandwich attacks economically unfeasible.
+
+## API key security
+
+Flash requires an API key passed via the `x-definitive-api-key` header on every request. Keys are scoped to each specific integrator, and funds are never commingled amongst integrators.
+
+## System status
+
+Monitor real-time Flash API uptime and incidents at [status.definitive.fi](https://status.definitive.fi/).
+
+## Responsible disclosure
+
+If you discover a security vulnerability in Flash's smart contracts or infrastructure, please email [security@definitive.fi](mailto:security@definitive.fi).
