@@ -21,7 +21,7 @@ When you call Flash, include the `flashIntegratorFeeBps` parameter on both `POST
 Pass `flashIntegratorFeeBps` as a string when calling `POST /quote`. Example: buying WETH with 100 USDC on Base with a 50 bps fee.
 
 ```bash cURL
-curl -X POST https://ddp.definitive.fi/v2/flash/quote \
+curl -X POST https://flash.definitive.fi/v1/quote \
   -H "x-definitive-api-key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -39,7 +39,7 @@ curl -X POST https://ddp.definitive.fi/v2/flash/quote \
 After the user signs the quote payload, submit the order with the same `flashIntegratorFeeBps` value.
 
 ```bash cURL
-curl -X POST https://ddp.definitive.fi/v2/flash/order \
+curl -X POST https://flash.definitive.fi/v1/order \
   -H "x-definitive-api-key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
