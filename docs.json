@@ -8,7 +8,7 @@
     "dark": "#ffc517"
   },
   "api": {
-    "openapi": "https://ddp.definitive.fi/v2/flash/openapi.json",
+    "openapi": "https://flash.definitive.fi/openapi.json",
     "playground": {
       "display": "interactive"
     },
@@ -75,7 +75,7 @@
         "groups": [
           {
             "group": "Flash",
-            "openapi": "https://ddp.definitive.fi/v2/flash/openapi.json",
+            "openapi": "https://flash.definitive.fi/openapi.json",
             "pages": [
               "POST /quote",
               "POST /order",
