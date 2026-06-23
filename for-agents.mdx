@@ -58,8 +58,8 @@ Plus chain-specific signing payloads (the other block is always null):
   <Accordion title="SVM (Solana)" defaultOpen>
     - `svm.orderMessage` — UTF-8 message the user must Ed25519-sign
     - `svm.nonce` / `svm.deadline` — order nonce and Unix-seconds expiry, echoed back on submit
-    - `svm.delegateIx` *(conditional)* — raw delegation instruction to submit onchain yourself
-    - `svm.sponsoredDelegateTx` *(conditional)* — base64 `VersionedTransaction`, a sponsor-paid alternative to `svm.delegateIx`
+    - `svm.delegateIx` *(optional)* — raw delegation instruction to submit onchain yourself
+    - `svm.sponsoredDelegateTx` *(optional)* — base64 `VersionedTransaction`, a sponsor-paid alternative to `svm.delegateIx`
   </Accordion>
 </AccordionGroup>
 
