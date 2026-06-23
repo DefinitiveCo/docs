@@ -35,7 +35,7 @@ Three steps: quote → sign → submit. The walkthrough below covers both EVM ch
 
 ### 1. Get a quote
 
-`POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset` (with matching `targetChain` / `contraChain` — same-chain only), `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`. On EVM, asset and wallet addresses are hex (`0x...`); on Solana, they are base58 mint and wallet addresses. If you charge an integrator fee, include `flashIntegratorFeeBps` and send the same value on `POST /order`.
+`POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset` (with matching `targetChain` / `contraChain` — same-chain only), `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`. Also pass `funderAddress` (the wallet that will sign and fund the order) so Flash can build the signing payloads — on EVM, omitting it returns an empty `evm.orderTypedData`. On EVM, asset and wallet addresses are hex (`0x...`); on Solana, they are base58 mint and wallet addresses. If you charge an integrator fee, include `flashIntegratorFeeBps` and send the same value on `POST /order`.
 
 <Note>
 Native assets cannot be swapped directly. Wrap them into their tokenized equivalent first (for example WETH on EVM chains, or WSOL on Solana), then reference that token by address.
