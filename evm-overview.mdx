@@ -13,7 +13,7 @@ Every EVM order follows four steps: quote, approve, sign, submit. The user's wal
 
 <Steps>
   <Step title="Get a quote">
-    Call `POST /quote` with the asset pair (`targetAsset` / `contraAsset` and their `targetChain` / `contraChain`, same-chain only), `side` (`buy` or `sell`), `qty` (a decimal string in the spent asset's units: `contraAsset` on a buy, `targetAsset` on a sell), and `orderType`. Pass `funderAddress` (the wallet that will sign and fund the order) so Flash can build `evm.orderTypedData` — the EIP-712 payload encodes the signer's address, so if you omit it the quote returns an empty `evm.orderTypedData`. If you charge an integrator fee, include `flashIntegratorFeeBps` in this quote request and send the same value when you submit the order. Flash's smart order router evaluates routes across 200+ DEXs and liquidity sources and returns the best pricing.
+    Call `POST /quote` with the asset pair (`targetAsset` / `contraAsset` and their `targetChain` / `contraChain`, same-chain only), `side` (`buy` or `sell`), `qty` (a decimal string in the spent asset's units: `contraAsset` on a buy, `targetAsset` on a sell), and `orderType`. Pass `funderAddress`, the wallet that will sign and fund the order, so Flash can build `evm.orderTypedData` — the EIP-712 payload encodes the signer's address, so if you omit it the quote returns an empty `evm.orderTypedData`. If you charge an integrator fee, include `flashIntegratorFeeBps` in this quote request and send the same value when you submit the order. Flash's smart order router evaluates routes across 200+ DEXs and liquidity sources and returns the best pricing.
 
     The response includes:
 
