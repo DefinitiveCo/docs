@@ -31,11 +31,11 @@ To register your own org as the integrator, follow [Become an Integrator](/getti
 
 Base URL: `https://flash.definitive.fi/v1`
 
-Three steps: quote → sign → submit. The walkthrough below covers EVM chains.
+Three steps: quote → sign → submit. The walkthrough below covers both EVM chains and Solana (SVM); for the full per-chain reference see [EVM Overview](/evm-overview) and [Solana Overview](/solana-overview). Set the chain with `targetChain` / `contraChain` (`solana` for SVM). The quote response and submit fields differ by chain: EVM quotes return an `evm` block, Solana quotes return a `svm` block, and the other block is always null.
 
 ### 1. Get a quote
 
-`POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset` (with matching `targetChain` / `contraChain` — same-chain only), `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`. If you charge an integrator fee, include `flashIntegratorFeeBps` and send the same value on `POST /order`.
+`POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset` (with matching `targetChain` / `contraChain` — same-chain only), `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`. On EVM, asset and wallet addresses are hex (`0x...`); on Solana, they are base58 mint and wallet addresses. If you charge an integrator fee, include `flashIntegratorFeeBps` and send the same value on `POST /order`.
 
 <Note>
 Native assets cannot be swapped directly. Wrap them into their tokenized equivalent first (for example WETH on EVM chains, or WSOL on Solana), then reference that token by address.
@@ -46,30 +46,71 @@ Returns:
 - `quoteId` — echo back on submit to lock pricing
 - `from` / `to` — directional legs, each with `asset` (`"target"` or `"contra"`), `amount`, and `notional`
 - `fees.estimatedFeeNotional` — total fee in USD notional
-- `evm` *(EVM quotes)* — signing payloads:
-  - `evm.orderTypedData` — EIP-712 payload to sign
-  - `evm.permitTypedData` *(optional, Permit2)* — typed-data payload to sign
-  - `evm.approveTx` *(optional)* — token-allowance transaction to submit onchain
+
+Plus chain-specific signing payloads (the other block is always null):
+
+<AccordionGroup>
+  <Accordion title="EVM" defaultOpen>
+    - `evm.orderTypedData` — EIP-712 payload to sign
+    - `evm.permitTypedData` *(optional, Permit2)* — typed-data payload to sign
+    - `evm.approveTx` *(optional)* — token-allowance transaction to submit onchain
+  </Accordion>
+  <Accordion title="SVM (Solana)" defaultOpen>
+    - `svm.orderMessage` — UTF-8 message the user must Ed25519-sign
+    - `svm.nonce` / `svm.deadline` — order nonce and Unix-seconds expiry, echoed back on submit
+    - `svm.delegateIx` *(conditional)* — raw delegation instruction to submit onchain yourself
+    - `svm.sponsoredDelegateTx` *(conditional)* — base64 `VersionedTransaction`, a sponsor-paid alternative to `svm.delegateIx`
+  </Accordion>
+</AccordionGroup>
 
 ### 2. Sign the payload
 
-**Token allowance (one-time per token).** If the quote returns `evm.approveTx`, submit it onchain first to grant the settlement contract allowance. Once landed, future orders for the same token skip this step.
+<AccordionGroup>
+  <Accordion title="EVM" defaultOpen>
+    **Token allowance (one-time per token).** If the quote returns `evm.approveTx`, submit it onchain first to grant the settlement contract allowance. Once landed, future orders for the same token skip this step.
 
-**Permit2 (per-order).** If the quote returns `evm.permitTypedData`, sign it the same way as `evm.orderTypedData`. On submit, pass the signature as `evmPermitSignature` and echo the payload back as `evmPermitTypedData`.
+    **Permit2 (per-order).** If the quote returns `evm.permitTypedData`, sign it the same way as `evm.orderTypedData`. On submit, pass the signature as `evmPermitSignature` and echo the payload back as `evmPermitTypedData`.
 
-**Order signature.** `evm.orderTypedData` is a JSON-stringified EIP-712 payload. Parse it and sign with `signTypedData`. On submit, pass the signature as `userSignature` and echo the payload back as `evmOrderTypedData`. Example with viem:
+    **Order signature.** `evm.orderTypedData` is a JSON-stringified EIP-712 payload. Parse it and sign with `signTypedData`. On submit, pass the signature as `userSignature` and echo the payload back as `evmOrderTypedData`. Example with viem:
 
-```ts
-import { privateKeyToAccount } from "viem/accounts";
+    ```ts
+    import { privateKeyToAccount } from "viem/accounts";
 
-const account = privateKeyToAccount("0x...");
-const { domain, types, primaryType, message } = JSON.parse(quote.evm.orderTypedData);
-const userSignature = await account.signTypedData({ domain, types, primaryType, message });
-```
+    const account = privateKeyToAccount("0x...");
+    const { domain, types, primaryType, message } = JSON.parse(quote.evm.orderTypedData);
+    const userSignature = await account.signTypedData({ domain, types, primaryType, message });
+    ```
+  </Accordion>
+  <Accordion title="SVM (Solana)" defaultOpen>
+    **Token delegation (one-time per token).** Solana has no ERC-20 approval. Instead, Flash grants itself delegate authority over the spent token using an SPL `Approve` instruction scoped to the Flash program. The quote returns the delegation in one of two mutually exclusive forms: `svm.delegateIx` (a raw instruction you wrap in a transaction, sign with your funder wallet, and submit yourself, paying the network fee) or `svm.sponsoredDelegateTx` (a base64 `VersionedTransaction` you sign and echo back as `svmSponsoredDelegateTx`, with Definitive covering the fee and broadcasting it). When both are null, the existing delegation already covers this order. Delegation and the order signature are separate actions and cannot be batched: one is an onchain or sponsored transaction, the other a gasless offchain signature.
+
+    **Order signature.** `svm.orderMessage` is a plaintext UTF-8 message, so a wallet's message-signing flow surfaces the order's mint and amount to the user. Sign it with the wallet's Ed25519 key, encode the 64-byte signature as base58, and pass it as `userSignature`. Example with @solana/web3.js:
+
+    ```ts
+    import { Keypair } from "@solana/web3.js";
+    import nacl from "tweetnacl";
+    import bs58 from "bs58";
+
+    const keypair = Keypair.fromSecretKey(bs58.decode("..."));
+    const message = new TextEncoder().encode(quote.svm.orderMessage);
+    const signature = nacl.sign.detached(message, keypair.secretKey);
+    const userSignature = bs58.encode(signature);
+    ```
+  </Accordion>
+</AccordionGroup>
 
 ### 3. Submit the order
 
-`POST /order` — executes the swap. Pass the same fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, `userSignature` from step 2, and `evmOrderTypedData` (echo of `quote.evm.orderTypedData`). If you included `flashIntegratorFeeBps` on the quote, include the same string value here. If Permit2 was used, also include `evmPermitTypedData` (echo of `quote.evm.permitTypedData`) and `evmPermitSignature`. The EVM deadline is encoded inside `evmOrderTypedData` — no separate deadline field needed.
+`POST /order` — executes the swap. Pass the same trade fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, and `userSignature` from step 2. If you included `flashIntegratorFeeBps` on the quote, include the same string value here.
+
+<AccordionGroup>
+  <Accordion title="EVM" defaultOpen>
+    Also pass `evmOrderTypedData` (echo of `quote.evm.orderTypedData`). If Permit2 was used, also include `evmPermitTypedData` (echo of `quote.evm.permitTypedData`) and `evmPermitSignature`. The EVM deadline is encoded inside `evmOrderTypedData` — no separate deadline field needed.
+  </Accordion>
+  <Accordion title="SVM (Solana)" defaultOpen>
+    Also pass `svmNonce` and `svmDeadline` (echoed back unchanged from the quote). If the quote returned `svm.sponsoredDelegateTx`, sign it and include it as `svmSponsoredDelegateTx`. The EVM-only fields (`evmOrderTypedData`, `evmPermitTypedData`, `evmPermitSignature`) must not be present on Solana submissions.
+  </Accordion>
+</AccordionGroup>
 
 Returns an `orderId`.
 
