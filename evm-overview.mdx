@@ -21,15 +21,19 @@ Every EVM order follows four steps: quote, approve, sign, submit. The user's wal
     - `from` / `to`: the spent and received legs, each with `asset` (`target` or `contra`), `amount`, and `notional`
     - `fees.estimatedFeeNotional`: total fee (gas, trading, integrator) in USD notional
     - `evm.orderTypedData`: the EIP-712 payload the user must sign
-    - `evm.approveTx` *(conditional)*: a token allowance transaction, included when the existing Permit2 allowance for the spent asset is insufficient
-    - `evm.permitTypedData` *(conditional)*: a Permit2 typed-data payload for gasless approval
+    - `evm.approveTx` *(conditional)*: an ERC-20 allowance transaction, included when the spent asset's current allowance is insufficient. Its spender is the Flash settlement contract, or the canonical Permit2 contract when the order uses Permit2 (see below)
+    - `evm.permitTypedData` *(conditional)*: a Permit2 typed-data payload for gasless approval, present only when the order uses Permit2
 
   </Step>
 
   <Step title="Handle token approval (one-time per token)">
-    If the quote response includes `evm.approveTx`, the `funderAddress` must submit this transaction onchain before the order can execute. This grants allowance for Flash to pull the spent asset (the `contraAsset` on a buy).
+    Flash supports two allowance mechanisms, both fully supported: a direct ERC-20 approval to the Flash settlement contract, or Permit2. The API picks one at quote time from the spent asset's current onchain allowance — the same way on every supported EVM chain — and the quote returns the fields for the chosen path. Respond to what it returns rather than assuming either one.
 
-    This is a standard ERC-20 approval and is required once per token per wallet. After the approval transaction lands onchain, future orders for the same token skip this step.
+    With no allowance set yet, the API defaults to the direct approval: it lets a wallet place its first trade in two steps (approval transaction + order signature) instead of three (approval transaction + Permit2 signature + order signature). To use Permit2 instead, approve the spent token from the `funderAddress` to the canonical Permit2 contract (`0x000000000022D473030F116dDEE9F6B43aC78BA3`) for at least the order amount *before* requesting the quote; the quote will then return `evm.permitTypedData`.
+
+    If the quote response includes `evm.approveTx`, the `funderAddress` must submit this transaction onchain before the order can execute. This grants allowance for Flash to pull the spent asset (the `contraAsset` on a buy). It is a standard ERC-20 `approve` for an unlimited amount, already scoped to the correct spender (the settlement contract, or the Permit2 contract on the Permit2 path) — submit it as returned.
+
+    The approval is required once per token per wallet. After the approval transaction lands onchain, future orders for the same token skip this step.
 
     <Note>
       The approval transaction (`evm.approveTx`) and the order signature (`evm.orderTypedData`) cannot be batched into a single user interaction. The approval is an onchain transaction that costs gas. The order signature is a gasless offchain signature. They are separate actions by design.
@@ -53,7 +57,7 @@ Every EVM order follows four steps: quote, approve, sign, submit. The user's wal
   </Step>
 
   <Step title="Submit the order">
-    Call `POST /order` with the original trade parameters plus `funderAddress`, `quoteId`, `userSignature`, and `evmOrderTypedData` (echoed back unchanged). If you set `flashIntegratorFeeBps` on the quote, include the same string value here. If Permit2 was used, also include `evmPermitTypedData` and `evmPermitSignature`. The deadline is encoded inside `evmOrderTypedData`, so no separate deadline field is needed.
+    Call `POST /order` with the original trade parameters plus `funderAddress`, `quoteId`, `userSignature`, and `evmOrderTypedData` (echoed back unchanged). If you set `flashIntegratorFeeBps` on the quote, include the same string value here. If Permit2 was used, also include `evmPermitTypedData` and `evmPermitSignature`. The deadline is encoded inside `evmOrderTypedData` — Flash derives it from your quote request (see [Order expiry](/placing-orders#order-expiry)), so no separate deadline field is needed.
 
     Flash handles gas, MEV protection, simulation, and onchain landing. The response returns an `orderId` for tracking.
   </Step>

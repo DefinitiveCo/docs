@@ -52,8 +52,8 @@ Plus chain-specific signing payloads (the other block is always null):
 <AccordionGroup>
   <Accordion title="EVM" defaultOpen>
     - `evm.orderTypedData` — EIP-712 payload to sign
-    - `evm.permitTypedData` *(optional, Permit2)* — typed-data payload to sign
-    - `evm.approveTx` *(optional)* — token-allowance transaction to submit onchain
+    - `evm.permitTypedData` *(optional, Permit2)* — typed-data payload to sign, present only when the order uses Permit2
+    - `evm.approveTx` *(optional)* — ERC-20 allowance transaction to submit onchain; its spender is the settlement contract, or the Permit2 contract on the Permit2 path
   </Accordion>
   <Accordion title="SVM (Solana)" defaultOpen>
     - `svm.orderMessage` — UTF-8 message the user must Ed25519-sign
@@ -67,9 +67,9 @@ Plus chain-specific signing payloads (the other block is always null):
 
 <AccordionGroup>
   <Accordion title="EVM" defaultOpen>
-    **Token allowance (one-time per token).** If the quote returns `evm.approveTx`, submit it onchain first to grant the settlement contract allowance. Once landed, future orders for the same token skip this step.
+    **Token allowance (one-time per token).** Flash uses one of two allowance mechanisms — a direct ERC-20 approval to the settlement contract, or Permit2 — chosen at quote time from the wallet's current allowance state. With nothing approved yet it defaults to the direct approval (two signatures for a first trade instead of three); to force Permit2, pre-approve the token to the canonical Permit2 contract (`0x000000000022D473030F116dDEE9F6B43aC78BA3`) before quoting. If the quote returns `evm.approveTx`, submit it onchain first; it already targets the correct spender (the settlement contract, or the Permit2 contract on the Permit2 path). Once landed, future orders for the same token skip this step.
 
-    **Permit2 (per-order).** If the quote returns `evm.permitTypedData`, sign it the same way as `evm.orderTypedData`. On submit, pass the signature as `evmPermitSignature` and echo the payload back as `evmPermitTypedData`.
+    **Permit2 (per-order).** If the quote returns `evm.permitTypedData`, the order uses Permit2: sign it the same way as `evm.orderTypedData`. On submit, pass the signature as `evmPermitSignature` and echo the payload back as `evmPermitTypedData`.
 
     **Order signature.** `evm.orderTypedData` is a JSON-stringified EIP-712 payload. Parse it and sign with `signTypedData`. On submit, pass the signature as `userSignature` and echo the payload back as `evmOrderTypedData`. Example with viem:
 
