@@ -50,6 +50,16 @@ For limit orders, `limitNotionalPrice` is the USD price of the target asset (the
 
 `stop`, `stop-loss`, `take-profit`, and `bracket` orders fire on a price condition rather than a fixed limit. Each entry in `triggers` carries a `notionalPrice`, the USD price of the target asset (the traded asset, `targetAsset`), not the contra asset, and a `triggerType`: `lower` fires when the market drops to or below the price, `upper` fires when it rises to or above. Stop, stop-loss, and take-profit take one trigger; bracket takes two with opposite `triggerType` values.
 
+## Order expiry
+
+`FlashOrder.deadline` is enforced onchain, but you do not set the signed deadline directly — Flash derives it from your quote request. Control expiry through the quote-request parameters below so the API order expiration and the onchain signature deadline stay aligned; prefer these over editing the deadline inside the signed payload.
+
+| Order type | How the deadline is set |
+| --- | --- |
+| `market` | A short deadline (roughly 5 minutes from quote time). No expiry parameter. |
+| `twap` | Set `durationSeconds` on the quote request. It is converted into an internal expiration and signed with a 60-second execution buffer. |
+| `limit`, `stop`, `stop-loss`, `take-profit`, `bracket` (including their limit variants when `limitNotionalPrice` is supplied) | Set `expireTime` for good-til-time (GTT) behavior. Omit it for good-til-cancelled (GTC), which uses an effectively non-expiring sentinel (`2^48 - 1`). |
+
 ## Examples
 
 All examples buy or sell WETH (`0x4200000000000000000000000000000000000006`) against USDC (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`) on Base.
@@ -135,6 +145,8 @@ The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset). The order executes
 | `flashIntegratorFeeBps` | Optional for integrator fees | Fee in basis points; set the same string value on the quote and order requests |
 | `limitNotionalPrice` | Limit orders | USD price of the target asset (`targetAsset`), not the contra asset; buy at or below, sell at or above |
 | `triggers` | Stop / stop-loss / take-profit / bracket | `notionalPrice` is the USD price of the target asset (`targetAsset`), not the contra asset; plus `triggerType` (`upper` / `lower`) |
+| `expireTime` | Optional for limit / trigger orders | Order expiration for good-til-time behavior; omit for good-til-cancelled |
+| `durationSeconds` | TWAP orders | Order duration in seconds; converted to the onchain deadline with a 60s execution buffer |
 
 <CardGroup cols={2}>
   <Card title="EVM Overview" icon="cube" href="/evm-overview">

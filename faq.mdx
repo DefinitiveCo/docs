@@ -11,10 +11,10 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
   </Accordion>
 
   <Accordion title="How do approvals work on EVM chains?">
-    On EVM, the user signs up to three things depending on the flow:
+    On EVM, Flash uses one of two allowance mechanisms — a direct ERC-20 approval to the settlement contract, or Permit2 — and the quote response tells you which applies. The user signs up to three things depending on the flow:
 
-    1. A **one-time ERC-20 approval** (`approveTx`) granting allowance the first time a wallet trades a given token. Subsequent orders for the same token skip this step.
-    2. A **Permit2 signature** (`permitTypedData`) when Permit2 is the allowance mechanism. Gasless, off-chain, signed per order.
+    1. A **one-time ERC-20 approval** (`approveTx`) granting allowance the first time a wallet trades a given token. Its spender is the settlement contract, or the Permit2 contract when the order uses Permit2. Subsequent orders for the same token skip this step.
+    2. A **Permit2 signature** (`permitTypedData`), present only when the order uses Permit2. Gasless, off-chain, signed per order.
     3. A **Flash order signature** (`orderTypedData`), an EIP-712 payload authorizing the specific trade. Gasless, off-chain, signed per order. Always required.
 
     Our contract validates these signatures on-chain at execution time. Users can revoke the approval or cancel the order at any point, which removes our ability to pull funds.
@@ -105,7 +105,7 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
   </Accordion>
 
   <Accordion title="What is the vault address in the EVM FlashOrder EIP-712 payload, and do I need to set or track it?">
-    That's the Definitive vault for your account, and there's one vault per chain. The quote response fills it in, and you sign what's returned. You don't need to set or track the vault address on your side.
+    That's the Definitive vault for your integrator account — your fee-settlement vault and the workspace where the swap executes — and there's one vault per chain. The signed order binds execution to it: Flash pulls the spent asset into that vault, runs the swap, keeps your integrator fee there, and sends the output to the destination wallet. The quote response fills the address in and you sign what's returned, so you don't need to set or track it on your side.
   </Accordion>
 
   <Accordion title="Does the approval transaction need to come from the funderAddress?">

@@ -16,7 +16,7 @@ Here is how it works at a high level:
 
 ## Token approval (onchain, one-time)
 
-Before Flash can move a token, the user grants a one-time onchain approval that lets Flash pull it: a standard ERC-20 `approve` transaction on EVM, or a token delegate on Solana. By default this is set to unlimited so the user only needs to approve once per token; integrators who want an extra layer of safety can scope it to the exact order amount instead.
+Before Flash can move a token, the user grants a one-time onchain approval that lets Flash pull it: a standard ERC-20 `approve` transaction on EVM, or a token delegate on Solana. The quote returns this approval for an unlimited amount, so the user only needs to approve once per token; integrators who want an extra layer of safety can lower the amount to the exact order size before submitting it.
 
 The approval alone does not allow Flash to move funds. Every trade also requires a signed order payload (see below) that specifies the exact amount and a deadline verified onchain. The order signature, not the approval amount, is what prevents overspending.
 
