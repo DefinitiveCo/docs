@@ -7,7 +7,7 @@ description: "Advanced onchain trading for wallets, apps, and AI agents. One API
   **Flash is in beta.** APIs and behavior may change. Reach out to the Definitive team before relying on Flash in production.
 </Note>
 
-Flash is Definitive's trading API for **wallets, trading apps, and AI agents** that need more than a basic market swap. One integration gives your users Limit, Stop Loss, Take Profit, TWAP, DCA, and Quick Trade orders, routed across **200\+ DEXs and market makers** on **12 chains**, with execution managed end to end.
+Flash is Definitive's trading API for **wallets, trading apps, and AI agents** that need more than a basic market swap. One integration gives your users Limit, Stop Loss, Take Profit, TWAP, and DCA orders, routed across **200\+ DEXs and market makers** on **12 chains**, with execution managed end to end.
 
 <CardGroup cols={3}>
   <Card title="$3B+" icon="chart-line">
@@ -29,7 +29,7 @@ Flash is Definitive's trading API for **wallets, trading apps, and AI agents** t
 
 <CardGroup cols={2}>
   <Card title="Every order type, one API" icon="shapes">
-    Market, Limit, Stop Loss, Take Profit, TWAP, DCA, and Quick Trade from a single endpoint. Skip the 6-month build.
+    Market, Limit, Stop Loss, Take Profit, TWAP, and DCA from a single endpoint. Skip the 6-month build.
   </Card>
 
   <Card title="Smart routing" icon="route">
@@ -65,7 +65,6 @@ The most advanced order surface of any onchain trading API. Each type is one par
 | **Take Profit** | Trigger a market sell when price rises to a target. |
 | **TWAP** | Break a large order into tranches over 10 min to 30 days, with privacy-preserving execution. |
 | **DCA** | Recurring buys or sells at regular time intervals. |
-| **Quick Trade** | Optimized with higher slippage settings for high-volatility or low-liquidity tokens. |
 
 Most aggregators stop at Market. Flash is the only API that ships advanced order types across EVM and Solana.
 
@@ -77,9 +76,6 @@ Most aggregators stop at Market. Flash is the only API that ships advanced order
   </Step>
   <Step title="Sign">
     The user signs the EIP-712 (EVM) or SPL (Solana) payload offchain.
-  </Step>
-  <Step title="Land">
-    Submit the signed payload to `/order`. Flash handles gas, MEV protection, simulation, and onchain landing.
   </Step>
   <Step title="Land">
     Submit the signed payload to `/order`, including the same `flashIntegratorFeeBps` value used for the quote. Flash handles gas, MEV protection, simulation, and onchain landing.
