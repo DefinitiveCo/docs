@@ -65,7 +65,9 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
   </Accordion>
 
   <Accordion title="Can I swap native assets like ETH or SOL directly?">
-    No. Swapping native assets is not supported. Native assets must be wrapped into their tokenized equivalent before trading (for example, wrap ETH into WETH on EVM chains, or SOL into WSOL on Solana), and then referenced by token address in your order.
+    It depends on the direction. Swapping *to* a native asset is supported, so you can receive native ETH or SOL as the output of a trade. To do this, set the native sentinel address as your `toAsset`, for example `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` to receive native ETH on EVM chains.
+
+    Swapping *from* a native asset is not supported. To trade from a native asset, wrap it into its tokenized equivalent first (for example, wrap ETH into WETH on EVM chains, or SOL into WSOL on Solana), and then reference it by token address in your order.
   </Accordion>
 </AccordionGroup>
 
