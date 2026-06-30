@@ -14,7 +14,7 @@ Flash API uses a target/contra framework to define every trade. Understanding th
 Both legs of the pair must be on the same chain, so `targetChain` and `contraChain` are the same value. Assets are always referenced by address, not symbol.
 
 <Note>
-Native assets cannot be swapped directly. Wrap them into their tokenized equivalent first (for example WETH on EVM chains, or WSOL on Solana), then reference that token by address in your order.
+Native asset behavior is chain-specific. If you spend a native gas asset, request a quote through that chain's native-asset flow, send the returned `wrap` action, then submit with the wrapped-native asset from the quote. See [EVM native assets](/evm-overview#native-eth-and-wrapped-assets) and [Solana native SOL](/solana-overview#native-sol-and-wsol).
 </Note>
 
 ## How `qty` works
@@ -37,6 +37,12 @@ All price fields in Flash are expressed as the **USD notional value of the targe
 Market orders do not take a price field. Instead, you bound execution with `maxSlippage` and `maxPriceImpact`.
 
 Flash enforces slippage offchain through its execution engine. If the swap cannot meet your `maxSlippage`, no funds are moved.
+
+## QuickTrade market orders
+
+QuickTrade is a market-only execution mode for low-latency trading. Set `quickTrade: true` on both `POST /quote` and `POST /order` when instant quoting and faster execution matter more than additional route optimization.
+
+Use QuickTrade only with `orderType: "market"`. It is not available for limit, trigger, or TWAP orders, and invalid combinations are rejected. Keep setting `maxSlippage` and `maxPriceImpact` as usual to bound execution.
 
 ## Limit pricing
 
@@ -140,6 +146,7 @@ The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset). The order executes
 | `contraAsset` / `contraChain` | Always | The pricing/payment asset, by address and chain |
 | `side` | Always | `"buy"` = buy the target; `"sell"` = sell the target |
 | `qty` | Always | Contra quantity for buys; target quantity for sells |
+| `quickTrade` | Market orders only | Low-latency execution mode; set the same value on quote and order requests |
 | `maxSlippage` | Optional | Slippage tolerance as a decimal (default `"0.05"`) |
 | `maxPriceImpact` | Optional | Max price impact as a decimal (default `"0.05"`) |
 | `flashIntegratorFeeBps` | Optional for integrator fees | Fee in basis points; set the same string value on the quote and order requests |
