@@ -65,9 +65,9 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
   </Accordion>
 
   <Accordion title="Can I swap native assets like ETH or SOL directly?">
-    It depends on the direction. Swapping *to* a native asset is supported, so you can receive native ETH or SOL as the output of a trade. To do this, set the native sentinel address as your `toAsset`, for example `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` to receive native ETH on EVM chains.
+    It depends on the chain and direction. On EVM chains, you can receive native ETH or the chain's native gas asset as the output of a trade by using `0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee` as the received asset.
 
-    Swapping *from* a native asset is not supported. To trade from a native asset, wrap it into its tokenized equivalent first (for example, wrap ETH into WETH on EVM chains, or SOL into WSOL on Solana), and then reference it by token address in your order.
+    To spend a native gas asset on EVM, quote with `0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee` as the spent asset, send the returned `wrap.evmTx`, then submit using the wrapped-native asset returned by the quote. On Solana, quote native SOL input with `So11111111111111111111111111111111111111112` as the spent asset and `svmUseNativeSOL: true`; send the returned `wrap.svmInstructions` before submitting. Solana output to `So11111111111111111111111111111111111111112` is wSOL, not native SOL.
   </Accordion>
 </AccordionGroup>
 
@@ -122,4 +122,3 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
     Yes. The spender field in Permit2 signatures is scoped specifically to the Flash settlement contract. It is not a generic Permit2 spender that any arbitrary router could claim against.
   </Accordion>
 </AccordionGroup>
-

@@ -23,6 +23,7 @@ Every EVM order follows four steps: quote, approve, sign, submit. The user's wal
     - `evm.orderTypedData`: the EIP-712 payload the user must sign
     - `evm.approveTx` *(conditional)*: an ERC-20 allowance transaction, included when the spent asset's current allowance is insufficient. Its spender is the Flash settlement contract, or the canonical Permit2 contract when the order uses Permit2 (see below)
     - `evm.permitTypedData` *(conditional)*: a Permit2 typed-data payload for gasless approval, present only when the order uses Permit2
+    - `wrap` *(conditional)*: a pre-trade wrap action, included when the quote spends the native gas asset
 
   </Step>
 
@@ -62,6 +63,17 @@ Every EVM order follows four steps: quote, approve, sign, submit. The user's wal
     Flash handles gas, MEV protection, simulation, and onchain landing. The response returns an `orderId` for tracking.
   </Step>
 </Steps>
+
+## Native ETH and wrapped assets
+
+Flash can quote trades that spend native ETH or another EVM chain's native gas asset, but settlement spends the wrapped ERC-20 token. To spend the native asset, set the spent side of the quote to `0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee`:
+
+- For `side: "sell"`, set `targetAsset` to the native address.
+- For `side: "buy"`, set `contraAsset` to the native address.
+
+When wrapping is required, the quote response includes `wrap.evmTx` and `wrap.wrappedAsset`. Send `wrap.evmTx` from the `funderAddress` before submitting the order. Then submit the order using the quoted `targetAsset` / `contraAsset` values; the spent side will be the wrapped-native token from `wrap.wrappedAsset`, such as WETH.
+
+Submitting an order with `0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee` as the spent asset is rejected. The native address is only submit-safe when it is the received asset. On EVM chains, you can receive native ETH or the chain's native gas asset as the output of a trade.
 
 ## Smart wallet support
 

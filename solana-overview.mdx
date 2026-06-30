@@ -24,6 +24,7 @@ Every Solana order follows four steps: quote, delegate, sign, submit. The user's
     - `svm.nonce` and `svm.deadline`: order nonce and Unix-seconds expiry, echoed back at submit so the program can rebuild the signed message
     - `svm.delegateIx` *(conditional)*: a Solana instruction granting the Flash program delegate authority over the spent token, included when the existing delegation is insufficient
     - `svm.sponsoredDelegateTx` *(conditional)*: a sponsor-paid alternative to `delegateIx` (see below)
+    - `wrap` *(conditional)*: native-SOL wrapping instructions, included when the quote spends native SOL
 
     On Solana quotes the `evm` block is always null.
 
@@ -69,6 +70,16 @@ Every Solana order follows four steps: quote, delegate, sign, submit. The user's
     Flash handles priority fees, MEV protection, simulation, and onchain landing. The response returns an `orderId` for tracking.
   </Step>
 </Steps>
+
+## Native SOL and wSOL
+
+Flash settles Solana trades against SPL tokens. The mint `So11111111111111111111111111111111111111112` is the wSOL mint used in Flash requests.
+
+To spend native SOL, set the spent asset to `So11111111111111111111111111111111111111112` and set `svmUseNativeSOL: true` on the quote request. For `side: "sell"`, the spent asset is `targetAsset`; for `side: "buy"`, it is `contraAsset`. You must also include `funderAddress` so Flash can build the wrapping instructions.
+
+The quote response returns `wrap.svmInstructions`. Send those instructions from the funder wallet before signing and submitting the order. The order itself uses the wSOL mint, plus the `svm.orderMessage`, `svm.nonce`, and `svm.deadline` returned by the quote.
+
+If you omit `svmUseNativeSOL`, `So11111111111111111111111111111111111111112` is treated as an ordinary existing wSOL balance. When `So11111111111111111111111111111111111111112` is the buy asset, the output is wSOL. Flash does not currently support native SOL as the output asset.
 
 ## Signer support
 
