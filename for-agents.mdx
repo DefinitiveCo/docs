@@ -58,6 +58,7 @@ Plus chain-specific signing payloads (the other block is always null):
   <Accordion title="SVM (Solana)" defaultOpen>
     - `svm.orderMessage` — UTF-8 message the user must Ed25519-sign
     - `svm.nonce` / `svm.deadline` — order nonce and Unix-seconds expiry, echoed back on submit
+    - `svm.ataSetupIxs` *(optional)* — idempotent instructions to create the funder's input/output token accounts, present when either is missing on-chain
     - `svm.delegateIx` *(optional)* — raw delegation instruction to submit onchain yourself
     - `svm.sponsoredDelegateTx` *(optional)* — base64 `VersionedTransaction`, a sponsor-paid alternative to `svm.delegateIx`
   </Accordion>
@@ -82,6 +83,8 @@ Plus chain-specific signing payloads (the other block is always null):
     ```
   </Accordion>
   <Accordion title="SVM (Solana)" defaultOpen>
+    **Token accounts (first time per token).** The swap needs the funder wallet's input and output associated token accounts (ATAs) to exist. When either is missing, the quote returns `svm.ataSetupIxs` — idempotent create-account instructions with the funder wallet in the payer slot. Send them from the funder wallet before delegating, signing, and submitting; the funder wallet pays the account rent and owns the accounts. They are a no-op when the account already exists, and `svm.ataSetupIxs` is null once both accounts exist. When an order also wraps native SOL or needs delegation, run the onchain steps in this order: create token accounts, wrap, delegate.
+
     **Token delegation (one-time per token).** Solana has no ERC-20 approval. Instead, Flash grants itself delegate authority over the spent token using an SPL `Approve` instruction scoped to the Flash program. The quote returns the delegation in one of two mutually exclusive forms: `svm.delegateIx` (a raw instruction you wrap in a transaction, sign with your funder wallet, and submit yourself, paying the network fee) or `svm.sponsoredDelegateTx` (a base64 `VersionedTransaction` you sign and echo back as `svmSponsoredDelegateTx`, with Definitive covering the fee and broadcasting it). When both are null, the existing delegation already covers this order. Delegation and the order signature are separate actions and cannot be batched: one is an onchain or sponsored transaction, the other a gasless offchain signature.
 
     **Order signature.** `svm.orderMessage` is a plaintext UTF-8 message, so a wallet's message-signing flow surfaces the order's mint and amount to the user. Sign it with the wallet's Ed25519 key, encode the 64-byte signature as base58, and pass it as `userSignature`. Example with @solana/web3.js:
