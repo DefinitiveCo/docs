@@ -34,12 +34,12 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
   <Step title="Create your token accounts (first time per token)">
     The swap moves tokens through your funder wallet's associated token accounts (ATAs), so the input and output ATAs must exist before the order runs. When either is missing on-chain, the quote returns `svm.ataSetupIxs`: one idempotent create-associated-token-account instruction per missing account, with your funder wallet in the payer slot.
 
-    Send these instructions from your funder wallet before delegating, signing, and submitting. Your funder wallet pays the account rent (about 0.002 SOL per account) and owns the accounts, so you keep control of that rent.
+    Send these instructions from your funder wallet before delegating, signing, and submitting. Your funder wallet pays the account rent (about 0.002 SOL per account, more for Token-2022 mints with extensions) and owns the accounts.
 
     The instructions are idempotent, so re-sending them is a safe no-op, and `svm.ataSetupIxs` is null once both accounts already exist. When a single order needs several onchain setup actions, run them in this order: create token accounts, wrap native SOL (if the quote spends native SOL), then delegate.
 
     <Note>
-      Flash does not create these accounts for you. Creating them from your own wallet means you fund and own the account rent, and can reclaim it later by closing the account.
+      Execute `svm.ataSetupIxs` whenever the quote returns it, so your own wallet funds and owns the account rent — don't rely on Flash to create these accounts for you.
     </Note>
 
   </Step>
@@ -93,7 +93,7 @@ To spend native SOL, set the spent asset to `So111111111111111111111111111111111
 
 The quote response returns `wrap.svmInstructions`. Send those instructions from the funder wallet before signing and submitting the order. The order itself uses the wSOL mint, plus the `svm.orderMessage`, `svm.nonce`, and `svm.deadline` returned by the quote.
 
-For native-SOL quotes, `wrap.svmInstructions` creates your wSOL (input) account itself, so `svm.ataSetupIxs` only covers the output account. Run `ataSetupIxs` first, then the wrap instructions, then delegate, sign, and submit.
+For native-SOL quotes, `wrap.svmInstructions` creates your wSOL (input) account itself, so `svm.ataSetupIxs` only covers the output account. Land the onchain steps in order — `ataSetupIxs`, then the wrap instructions, then delegation — before you sign and submit. (The order signature is offchain; it only needs to be included in the submit.)
 
 If you omit `svmUseNativeSOL`, `So11111111111111111111111111111111111111112` is treated as an ordinary existing wSOL balance. When `So11111111111111111111111111111111111111112` is the buy asset, the output is wSOL. Flash does not currently support native SOL as the output asset.
 
