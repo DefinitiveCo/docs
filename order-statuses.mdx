@@ -5,6 +5,10 @@ description: The order statuses returned by Flash, which ones are cancellable, h
 
 Flash defines eight order statuses. They appear in the responses of the Cancel Order, Get Order Details, and List Orders endpoints.
 
+<Note>
+Order status changes also stream live over the [Orders WebSocket](/api-reference/flash/websocket). When you track open orders from the stream, drop an order once its status becomes terminal (`ORDER_STATUS_FILLED`, `ORDER_STATUS_CANCELLED`, or `ORDER_STATUS_REJECTED`).
+</Note>
+
 ## Available statuses
 
 | Status | Description |

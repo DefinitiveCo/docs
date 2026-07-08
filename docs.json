@@ -75,7 +75,7 @@
         "tab": "APIs",
         "groups": [
           {
-            "group": "Flash",
+            "group": "Flash REST",
             "openapi": "https://flash.definitive.fi/v1/openapi.json",
             "pages": [
               "POST /quote",
@@ -84,6 +84,10 @@
               "GET /orders/{orderId}",
               "POST /orders/{orderId}/cancel"
             ]
+          },
+          {
+            "group": "Flash WebSocket",
+            "pages": ["api-reference/flash/websocket"]
           }
         ]
       }
