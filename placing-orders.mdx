@@ -40,7 +40,7 @@ Flash enforces slippage offchain through its execution engine. If the swap canno
 
 ## QuickTrade market orders
 
-QuickTrade is a market-only execution mode for low-latency trading. Set `quickTrade: true` on both `POST /quote` and `POST /order` when instant quoting and faster execution matter more than additional route optimization.
+QuickTrade is a market-only execution mode for low-latency trading. Set `quickTrade: true` on both `POST /quote` and `POST /order` for newly launched or high-volatility tokens, when faster execution matters more than additional route optimization.
 
 Use QuickTrade only with `orderType: "market"`. It is not available for limit, trigger, or TWAP orders, and invalid combinations are rejected. Keep setting `maxSlippage` and `maxPriceImpact` as usual to bound execution.
 
