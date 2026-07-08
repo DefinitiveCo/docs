@@ -117,6 +117,10 @@ Plus chain-specific signing payloads (the other block is always null):
 
 Returns an `orderId`.
 
+<Note>
+To track the order after submit, either poll `GET /orders`, or stream live updates over the [Orders WebSocket](/api-reference/flash/websocket) instead of polling.
+</Note>
+
 ## Supported chains
 
 `arbitrum`, `avalanche`, `base`, `bsc`, `ethereum`, `optimism`, `polygon`, `solana`, `hyperevm`, `plasma`, `monad`
