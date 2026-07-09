@@ -40,9 +40,9 @@ Flash enforces slippage offchain through its execution engine. If the swap canno
 
 ## QuickTrade market orders
 
-QuickTrade is a market-only execution mode for low-latency trading. Set `quickTrade: true` on both `POST /quote` and `POST /order` for newly launched or high-volatility tokens, when faster execution matters more than additional route optimization.
+QuickTrade is an execution mode for sniping newly launched tokens, exclusive to market swaps.
 
-Use QuickTrade only with `orderType: "market"`. It is not available for limit, trigger, or TWAP orders, and invalid combinations are rejected. Keep setting `maxSlippage` and `maxPriceImpact` as usual to bound execution.
+Reach out to the Definitive team to find out whether QuickTrade is a good fit for your use case.
 
 ## Limit pricing
 
@@ -146,7 +146,7 @@ The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset). The order executes
 | `contraAsset` / `contraChain` | Always | The pricing/payment asset, by address and chain |
 | `side` | Always | `"buy"` = buy the target; `"sell"` = sell the target |
 | `qty` | Always | Contra quantity for buys; target quantity for sells |
-| `quickTrade` | Market orders only | Low-latency execution mode; set the same value on quote and order requests |
+| `quickTrade` | Market orders only | Low-latency execution mode |
 | `maxSlippage` | Optional | Slippage tolerance as a decimal (default `"0.05"`) |
 | `maxPriceImpact` | Optional | Max price impact as a decimal (default `"0.05"`) |
 | `flashIntegratorFeeBps` | Optional for integrator fees | Fee in basis points; set the same string value on the quote and order requests |
