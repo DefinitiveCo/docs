@@ -94,10 +94,6 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
     A stop buy is a buy-side trigger: it rests until the market rises to your trigger price, then executes a market buy. A stop-loss is the sell-side equivalent: it rests until the market falls to your trigger price, then executes a market sell.
   </Accordion>
 
-  <Accordion title="How does QuickTrade differ from a regular trade?">
-    QuickTrade is a market-only execution mode tuned for speed. Set `quickTrade: true` on both the quote and order requests for newly launched or high-volatility tokens, when faster execution matters more than additional route optimization. Everything else about the flow is the same as a regular market order. See [QuickTrade market orders](/placing-orders#quicktrade-market-orders).
-  </Accordion>
-
   <Accordion title="Is there a modify/amend endpoint for open orders?">
     No, but cancelling your order and placing a new one achieves the same effect. The intended workflow is cancel-and-replace: cancel the existing order and place a new one. We're evaluating a native modify endpoint for a future release.
   </Accordion>
