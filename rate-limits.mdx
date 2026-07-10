@@ -9,6 +9,10 @@ The Flash API enforces a per-API-key rate limit:
 | ------------- | ------------ |
 | 5 requests    | per second   |
 
+<Note>
+  Need higher throughput? We can support custom limits per client based on your needs. Let us know the rate limits you're looking for on each endpoint and we can set them up.
+</Note>
+
 ### Response headers
 
 Every response includes the following draft-6 rate-limit headers:
@@ -20,14 +24,10 @@ Every response includes the following draft-6 rate-limit headers:
 | `RateLimit-Remaining` | Requests remaining in the current window           |
 | `RateLimit-Reset`     | Seconds until the window resets                    |
 
-On a `429` response, an additional header is set:
-
-| Header        | Meaning                                       |
-| ------------- | --------------------------------------------- |
-| `Retry-After` | Seconds until you may retry the request       |
+On a `429` response, the same `RateLimit-*` headers are returned. Use `RateLimit-Reset` to know how many seconds until you can retry (at most 1, since the window is 1 second).
 
 ## Recommended client behavior
 
 - Read `RateLimit-Remaining` after each successful response and throttle when it nears zero.
-- On `429`, back off for at least the number of seconds in `Retry-After` before retrying.
+- On `429`, wait the number of seconds in `RateLimit-Reset` before retrying.
 - Use exponential backoff with jitter for sustained pressure.
