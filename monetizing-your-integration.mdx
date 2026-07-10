@@ -16,6 +16,10 @@ When you call Flash, include the `flashIntegratorFeeBps` parameter on both `POST
 | **Where it goes** | Your Definitive vault, owned by the fee wallet connected to your integrator account. |
 | **When to set it** | On `POST /quote` and `POST /order`, with the same value on both calls. |
 
+## Which token your fee is paid in
+
+Your fee is paid in one of the trade's two tokens. Flash pays out in a stablecoin or major (e.g. WETH) if that's on either side of the trade, and defaults to the input token when neither side is a stablecoin or major. The `feeTicker` field on each fill tells you which token a given fee was collected in.
+
 ## Set your fee on quote and order
 
 Pass `flashIntegratorFeeBps` as a string when calling `POST /quote`. Example: buying WETH with 100 USDC on Base with a 50 bps fee.

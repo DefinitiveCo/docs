@@ -42,7 +42,11 @@ Flash's limit orders are held offchain, not exposed onchain. This means they are
 
 ## Cancellation
 
-The user can cancel any open order at any time by signing a cancel message: an EIP-191 `personal_sign` message on EVM, or an Ed25519 message on Solana. Flash removes the signed order payload from its execution system. The onchain approval or delegate remains in place since it is reusable for future orders, but without a valid signed payload Flash cannot execute any trade. On Solana, the user can additionally revoke the token delegate authority onchain at any time, which immediately prevents Flash from pulling funds regardless of any outstanding signed payloads.
+A user has two independent ways to stop Flash from executing, available at any time:
+
+1. **Cancel an order.** Sign a cancel message (an EIP-191 `personal_sign` message on EVM, or an Ed25519 message on Solana) and submit it to [`POST /orders/{orderId}/cancel`](/api-reference/flash/cancel). The order is immediately marked as cancelled and taken out of the execution queue, so Flash will never attempt to fill it. The onchain approval or delegate is left untouched and remains in place, reusable for future orders.
+
+2. **Revoke the approval (onchain).** Revoke the token approval directly from the wallet: a standard SPL-Token `Revoke` on Solana, or revoking the ERC-20 or Permit2 allowance on EVM. This removes Flash's delegate or spending authority entirely, so Flash can no longer pull that token for any order, regardless of any outstanding signed payloads. It is a standard onchain wallet action with no Definitive endpoint.
 
 <CardGroup cols={2}>
   <Card title="EVM Overview" icon="cube" href="/evm-overview">
