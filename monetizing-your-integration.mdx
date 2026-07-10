@@ -18,7 +18,7 @@ When you call Flash, include the `flashIntegratorFeeBps` parameter on both `POST
 
 ## Which token your fee is paid in
 
-Your fee is paid in one of the trade's two tokens. Flash pays out in a stablecoin or major asset when one is on either leg of the trade, and defaults to the input token when neither leg is a stablecoin or major. The `feeTicker` field on each fill tells you which token a given fee was collected in.
+Your fee is paid in one of the trade's two tokens. Flash pays out in a stablecoin or major (e.g. WETH) if that's on either side of the trade, and defaults to the input token when neither side is a stablecoin or major. The `feeTicker` field on each fill tells you which token a given fee was collected in.
 
 ## Set your fee on quote and order
 
