@@ -161,7 +161,7 @@ Flash encodes the codes as an ERC-8021 Schema-0 suffix at the tail of the settle
 - The byte immediately before the marker is the payload length.
 - Before the length is the payload itself: the attribution codes joined by commas.
 
-The codes are comma-separated, with Definitive's own registered code first and yours second — so on Base mainnet the codes payload ends with `,myapp`. Definitive only registers a code on Base, so on other EVM chains the suffix carries your code alone (`myapp`).
+The codes are comma-separated, with Definitive's own registered code first and yours second. Definitive only registers a code on Base, so on non-Base EVM chains the suffix carries your code alone.
 
 <CardGroup cols={2}>
   <Card title="Become an Integrator" icon="key" href="/getting-started">
