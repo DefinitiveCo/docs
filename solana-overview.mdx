@@ -32,14 +32,14 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
   </Step>
 
   <Step title="Create your token accounts (first time per token)">
-    The swap moves tokens through your funder wallet's associated token accounts (ATAs), so the input and output ATAs must exist before the order runs. When either is missing on-chain, the quote returns `svm.ataSetupIxs`: one idempotent create-associated-token-account instruction per missing account, with your funder wallet in the payer slot.
+    The swap moves tokens through your funder wallet's associated token accounts (ATAs), so the input and output ATAs must exist before the order runs. When either is missing on-chain, the quote returns `svm.ataSetupIxs`: one idempotent create-associated-token-account instruction per missing account, with your funder wallet in the payer slot. These instructions are not included in the `svm.sponsoredDelegateTx`, as Definitive does not sponsor token account creation.
 
     Send these instructions from your funder wallet before delegating, signing, and submitting. Your funder wallet pays the account rent (about 0.002 SOL per account, more for Token-2022 mints with extensions) and owns the accounts.
 
     The instructions are idempotent, so re-sending them is a safe no-op, and `svm.ataSetupIxs` is null once both accounts already exist. When a single order needs several onchain setup actions, run them in this order: create token accounts, wrap native SOL (if the quote spends native SOL), then delegate.
 
     <Note>
-      Execute `svm.ataSetupIxs` whenever the quote returns it, so your own wallet funds and owns the account rent — don't rely on Flash to create these accounts for you.
+      Definitive does not sponsor token account creation. Execute `svm.ataSetupIxs` whenever the quote returns it, they are not created for you.
     </Note>
 
   </Step>
