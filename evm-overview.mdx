@@ -58,7 +58,7 @@ Every EVM order follows four steps: quote, approve, sign, submit. The user's wal
   </Step>
 
   <Step title="Submit the order">
-    Call `POST /order` with the original trade parameters plus `funderAddress`, `quoteId`, `userSignature`, and `evmOrderTypedData` (echoed back unchanged). If you set `flashIntegratorFeeBps` on the quote, include the same string value here. If Permit2 was used, also include `evmPermitTypedData` and `evmPermitSignature`. The deadline is encoded inside `evmOrderTypedData` — Flash derives it from your quote request (see [Order expiry](/placing-orders#order-expiry)), so no separate deadline field is needed.
+    Call `POST /order` with the original trade parameters plus `funderAddress`, `quoteId`, `userSignature`, and `evmOrderTypedData` (echoed back unchanged). If you set `flashIntegratorFeeBps` on the quote, include the same string value here. If you want [Base builder-code attribution](/monetizing-your-integration#base-builder-code-attribution) on the settlement transaction, include `erc8021AttributionCode` here (order request only — it does not affect quotes). If Permit2 was used, also include `evmPermitTypedData` and `evmPermitSignature`. The deadline is encoded inside `evmOrderTypedData` — Flash derives it from your quote request (see [Order expiry](/placing-orders#order-expiry)), so no separate deadline field is needed.
 
     Flash handles gas, MEV protection, simulation, and onchain landing. The response returns an `orderId` for tracking.
   </Step>

@@ -108,7 +108,7 @@ Plus chain-specific signing payloads (the other block is always null):
 
 <AccordionGroup>
   <Accordion title="EVM" defaultOpen>
-    Also pass `evmOrderTypedData` (echo of `quote.evm.orderTypedData`). If Permit2 was used, also include `evmPermitTypedData` (echo of `quote.evm.permitTypedData`) and `evmPermitSignature`. The EVM deadline is encoded inside `evmOrderTypedData` — no separate deadline field needed.
+    Also pass `evmOrderTypedData` (echo of `quote.evm.orderTypedData`). If Permit2 was used, also include `evmPermitTypedData` (echo of `quote.evm.permitTypedData`) and `evmPermitSignature`. The EVM deadline is encoded inside `evmOrderTypedData` — no separate deadline field needed. To attribute the settlement transaction to your [Base builder code](/monetizing-your-integration#base-builder-code-attribution), include `erc8021AttributionCode` (order-only — it does not affect quotes).
   </Accordion>
   <Accordion title="SVM (Solana)" defaultOpen>
     Also pass `svmNonce` and `svmDeadline` (echoed back unchanged from the quote). If the quote returned `svm.sponsoredDelegateTx`, sign it and include it as `svmSponsoredDelegateTx`. The EVM-only fields (`evmOrderTypedData`, `evmPermitTypedData`, `evmPermitSignature`) must not be present on Solana submissions.
