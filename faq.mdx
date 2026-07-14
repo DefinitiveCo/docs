@@ -78,6 +78,10 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
     Set `flashIntegratorFeeBps` on `POST /quote`, then submit the same string value on `POST /order`.
   </Accordion>
 
+  <Accordion title="How do I attribute transactions to my Base builder code?">
+    Register a builder code on [base.dev](https://base.dev), then pass it as `erc8021AttributionCode` on `POST /order` (EVM orders only — it does not affect quotes, so it is not sent on `POST /quote`). Flash appends it to the settlement transaction's calldata alongside Definitive's own code. See [Base builder-code attribution](/monetizing-your-integration#base-builder-code-attribution).
+  </Accordion>
+
   <Accordion title="Is there a sandbox or testnet environment?">
     We recommend testing on a production chain like Base or Solana using small amounts. We've found this is more reliable than testnets, which often have inaccurate gas behavior and omit nuances of live trading.
   </Accordion>

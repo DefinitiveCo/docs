@@ -150,6 +150,7 @@ The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset). The order executes
 | `maxSlippage` | Optional | Slippage tolerance as a decimal (default `"0.05"`) |
 | `maxPriceImpact` | Optional | Max price impact as a decimal (default `"0.05"`) |
 | `flashIntegratorFeeBps` | Optional for integrator fees | Fee in basis points; set the same string value on the quote and order requests |
+| `erc8021AttributionCode` | Optional, order request only | Base builder code appended to the settlement transaction for [ERC-8021 attribution](/monetizing-your-integration#base-builder-code-attribution) (EVM only); send it on the order request, not the quote |
 | `limitNotionalPrice` | Limit orders | USD price of the target asset (`targetAsset`), not the contra asset; buy at or below, sell at or above |
 | `triggers` | Stop / stop-loss / take-profit / bracket | `notionalPrice` is the USD price of the target asset (`targetAsset`), not the contra asset; plus `triggerType` (`upper` / `lower`) |
 | `expireTime` | Optional for limit / trigger orders | Order expiration for good-til-time behavior; omit for good-til-cancelled |
