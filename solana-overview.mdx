@@ -7,6 +7,8 @@ Flash API supports advanced orders for any SPL token on Solana, including Token-
 
 This page walks through how quoting, routing, and signing work on Solana at a high level. For the full endpoint reference, see [Quote](/api-reference/flash/quote) and [Order](/api-reference/flash/order).
 
+Base URL for all Flash API requests: `https://flash.definitive.fi/v1`
+
 ## Solana order flow
 
 Every Solana order follows four steps: quote, delegate, sign, submit. Before your first trade of a token, you also create the token accounts the swap needs. The user's wallet must authorize every action. Flash never takes custody of funds.

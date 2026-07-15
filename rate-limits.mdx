@@ -1,13 +1,15 @@
 ---
 title: Rate Limits
-description: Per-API-key request limits and 429 response behavior.
+description: Per-endpoint request limits and 429 response behavior.
 ---
 
-The Flash API enforces a per-API-key rate limit:
+The Flash API enforces a rate limit of 5 requests per second on each endpoint, per API key:
 
-| Limit         | Window       |
-| ------------- | ------------ |
-| 5 requests    | per second   |
+| Limit      | Window     | Scope                      |
+| ---------- | ---------- | -------------------------- |
+| 5 requests | per second | Each endpoint, per API key |
+
+Each endpoint (`quote`, `order`, list orders, get order, cancel) has its own independent bucket, so hitting the limit on one does not throttle the others.
 
 <Note>
   Need higher throughput? We can support custom limits per client based on your needs. Let us know the rate limits you're looking for on each endpoint and we can set them up.
@@ -15,7 +17,7 @@ The Flash API enforces a per-API-key rate limit:
 
 ### Response headers
 
-Every response includes the following draft-6 rate-limit headers:
+Every response includes the following draft-6 rate-limit headers, scoped to the endpoint you called:
 
 | Header                | Meaning                                            |
 | --------------------- | -------------------------------------------------- |

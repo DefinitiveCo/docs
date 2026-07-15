@@ -28,6 +28,17 @@ Flash's smart contracts were completed with no major findings:
 
 Additionally, Definitive's smart contracts (the same trade engine that powers Flash) have been audited multiple times by leading security firms, including Zellic, OtterSec, and Cantina. All audits have been completed with no material findings and are publicly available [here.](https://docs.definitive.fi/references/audits)
 
+## Settlement contracts
+
+Flash settles trades through audited contracts deployed onchain, and every address is independently verifiable. On EVM, integrators grant the ERC-20 approval to the settlement contract; on Solana, the trading program holds the SPL delegate authority and verifies each order signature.
+
+| Network | Contract | Address |
+| --- | --- | --- |
+| EVM | Flash settlement contract | [`0x5d00000873b6BF41539e6f5365B0Ff7d3c368f78`](https://etherscan.io/address/0x5d00000873b6BF41539e6f5365B0Ff7d3c368f78) |
+| Solana | Flash trading program | [`FLaSHxRVv6G1NCJ2SFGPvQqKUPszuDjaTkBMFCSzEqpJ`](https://explorer.solana.com/address/FLaSHxRVv6G1NCJ2SFGPvQqKUPszuDjaTkBMFCSzEqpJ) |
+
+The EVM contract is deployed at the same address on every supported EVM chain.
+
 ## Non-custodial by design
 
 Flash never takes custody of user funds. Tokens remain in the user's wallet until the exact moment a trade executes (even for triggered/conditional orders). There is no intermediate holding period, no fund transfers to a separate account, and no shared pools.
@@ -61,6 +72,8 @@ Multiple layers of MEV protection are built into the execution pipeline:
 ## API key security
 
 Flash requires an API key passed via the `x-definitive-api-key` header on every request. Keys are scoped to each specific integrator, and funds are never commingled amongst integrators.
+
+A leaked API key cannot move funds on its own. Every trade still requires the user's signed order and a valid onchain allowance, and an API key produces neither. If a key is exposed, revoke it and issue a replacement from the Definitive dashboard.
 
 ## System status
 
