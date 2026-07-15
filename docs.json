@@ -43,12 +43,18 @@
           {
             "group": "How Flash Works",
             "pages": [
-              "evm-overview",
-              "solana-overview",
-              "placing-orders",
               "non-custodial",
               "security",
               "faq"
+            ]
+          },
+          {
+            "group": "Flash Integration",
+            "pages": [
+              "evm-overview",
+              "solana-overview",
+              "placing-orders",
+              "resources"
             ]
           },
           {

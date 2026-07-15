@@ -23,6 +23,7 @@ Both channels require authentication. Include your Flash API key as `apiKey` in 
 - Both channels run over the same connection. Open one socket, then subscribe to `orders` and `heartbeats` on it.
 - Send your `subscribe` message as soon as the connection opens.
 - One connection streams one funder. Open a separate connection for each funder you track.
+- The per-key connection limit is >50. If you need it raised, reach out.
 - Also subscribe to the [`heartbeats`](#heartbeats-channel) channel so the connection stays open when order updates are sparse. Idle connections with no traffic are closed after about 60 seconds.
 - On disconnect, reconnect with capped backoff and jitter, then re-subscribe. Every subscribe returns a fresh snapshot.
 - On `UNAUTHORIZED`, stop reconnecting and check your API key; reconnecting with the same key will not authenticate. Other closes, including `CONNECTION_LIMIT`, are safe to retry with backoff.

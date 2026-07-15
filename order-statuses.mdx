@@ -16,7 +16,7 @@ Order status changes also stream live over the [Orders WebSocket](/api-reference
 | `ORDER_STATUS_UNSPECIFIED` | Default/unspecified status |
 | `ORDER_STATUS_PENDING` | Order is pending and waiting to be processed |
 | `ORDER_STATUS_ACCEPTED` | Order has been accepted and is being processed |
-| `ORDER_STATUS_PARTIALLY_FILLED` | Order has been partially filled |
+| `ORDER_STATUS_PARTIALLY_FILLED` | Order has been partially filled. A resting state for slice-based orders like TWAP: some slices have filled while the rest keep working. |
 | `ORDER_STATUS_FILLED` | Order has been completely filled |
 | `ORDER_STATUS_CANCELLED` | Order has been cancelled |
 | `ORDER_STATUS_REJECTED` | Order was rejected |
