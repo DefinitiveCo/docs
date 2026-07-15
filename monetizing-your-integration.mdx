@@ -22,7 +22,7 @@ Definitive charges a base fee of 10 bps (0.10%) on every trade, across all order
 
 ## Which token your fee is paid in
 
-Your fee is paid in one of the trade's two tokens. Flash pays out in a stablecoin or major (e.g. WETH) if that's on either side of the trade, and defaults to the input token when neither side is a stablecoin or major. The `feeTicker` field on each fill tells you which token a given fee was collected in.
+Your fee is paid in one of the trade's two tokens. Flash pays out in a stablecoin or major (e.g. WETH) if that's on either side of the trade, and defaults to the input token when neither side is a stablecoin or major. (The `feeTicker` field on each fill tells you which token a given fee was collected in.) You can always swap into stables/majors using Definitive if preferred.
 
 ## Set your fee on quote and order
 
@@ -74,11 +74,9 @@ curl -X POST https://flash.definitive.fi/v1/order \
   <Step title="Log in to Definitive">
     Go to [app.definitive.fi](https://app.definitive.fi) and sign in with your Flash integrator credentials.
   </Step>
-
   <Step title="Connect your fee wallet">
     Connect the EVM or Solana wallet associated with the vault you want to withdraw from.
   </Step>
-
   <Step title="Withdraw">
     Click **Withdraw** and sign the transaction in your wallet to move funds from your Definitive vault to your fee wallet.
   </Step>
@@ -86,7 +84,7 @@ curl -X POST https://flash.definitive.fi/v1/order \
 
 ## Track your fees
 
-Every fill returned by `GET /orders/{orderId}` includes fee fields so you can reconcile earnings programmatically.
+Every fill returned by `GET /orders/{orderId}` includes fee fields so you can reconcile earnings programmatically.  You can also track your fees on the Flash Integrator Dashboard - see details in [Become an Integrator](https://flash.definitive.fi/docs/getting-started).
 
 | Fill field | What it contains |
 | --- | --- |
@@ -128,7 +126,7 @@ Attribution is independent of [integrator fees](#how-it-works) — use either fe
 An invalid value is rejected at order placement with `erc8021AttributionCode must be 1–32 characters of [a-zA-Z0-9_.-] (no commas)`.
 
 <Note>
-Unlike `flashIntegratorFeeBps`, the attribution code is an order-only field. The fee must be sent identically on the quote and order because it changes pricing; the attribution code has no pricing effect, so you send it only on `POST /order`.
+  Unlike `flashIntegratorFeeBps`, the attribution code is an order-only field. The fee must be sent identically on the quote and order because it changes pricing; the attribution code has no pricing effect, so you send it only on `POST /order`.
 </Note>
 
 ### Pass your code on the order
@@ -171,6 +169,7 @@ The codes are comma-separated, with Definitive's own registered code first and y
   <Card title="Become an Integrator" icon="key" href="/getting-started">
     Set up your integrator account and API key.
   </Card>
+
   <Card title="Order endpoint" icon="paper-plane" href="/api-reference/flash/order">
     Full parameter reference for `POST /order`, including `flashIntegratorFeeBps`.
   </Card>
