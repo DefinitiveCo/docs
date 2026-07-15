@@ -16,6 +16,10 @@ When you call Flash, include the `flashIntegratorFeeBps` parameter on both `POST
 | **Where it goes** | Your Definitive vault, owned by the fee wallet connected to your integrator account. |
 | **When to set it** | On `POST /quote` and `POST /order`, with the same value on both calls. |
 
+## Definitive's fee
+
+Definitive charges a base fee of 10 bps (0.10%) on every trade, across all order types. This is separate from your integrator fee: `flashIntegratorFeeBps` stacks on top, so the total a user pays is Definitive's 10 bps plus whatever rate you set. Both are already included in the quote's `estimatedFeeNotional`.
+
 ## Which token your fee is paid in
 
 Your fee is paid in one of the trade's two tokens. Flash pays out in a stablecoin or major (e.g. WETH) if that's on either side of the trade, and defaults to the input token when neither side is a stablecoin or major. The `feeTicker` field on each fill tells you which token a given fee was collected in.
