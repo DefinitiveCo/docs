@@ -1,7 +1,11 @@
 ---
 title: Rate Limits
-description: Per-endpoint request limits and 429 response behavior.
+description: REST and WebSocket rate limits, and 429 response behavior.
 ---
+
+Flash applies separate limits to its REST endpoints and its WebSocket connections.
+
+## REST
 
 The Flash API enforces a rate limit of 5 requests per second on each endpoint, per API key:
 
@@ -28,8 +32,14 @@ Every response includes the following draft-6 rate-limit headers, scoped to the 
 
 On a `429` response, the same `RateLimit-*` headers are returned. Use `RateLimit-Reset` to know how many seconds until you can retry (at most 1, since the window is 1 second).
 
-## Recommended client behavior
+### Recommended client behavior
 
 - Read `RateLimit-Remaining` after each successful response and throttle when it nears zero.
 - On `429`, wait the number of seconds in `RateLimit-Reset` before retrying.
 - Use exponential backoff with jitter for sustained pressure.
+
+## WebSocket
+
+The Orders WebSocket is bounded by concurrent connections per API key rather than requests per second. The per-key connection limit is >50; if you need it raised, reach out. Each connection streams a single funder, so open a separate connection for every funder you track.
+
+See the [Orders WebSocket](/api-reference/flash/websocket) reference for connection handling, heartbeats, and error codes (including `CONNECTION_LIMIT`).

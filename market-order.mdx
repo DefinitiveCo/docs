@@ -1,0 +1,201 @@
+---
+title: "Market Order"
+description: "End-to-end market order on EVM and Solana. Quote, sign, and submit with runnable TypeScript."
+---
+
+A market order executes immediately at the best available price Flash can route. It takes no price field; you bound execution with `maxSlippage` and `maxPriceImpact`. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
+
+This page shows the full flow end to end (quote, sign, submit) as a runnable script for each chain. The EVM example buys WETH with USDC on Base; the Solana example buys WSOL with USDC.
+
+## Market parameters
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `orderType` | Yes | `"market"` |
+| `side` | Yes | `"buy"` or `"sell"` |
+| `qty` | Yes | Spend amount, as a string. Contra units on a buy, target units on a sell |
+| `maxSlippage` | Optional | Slippage tolerance as a decimal string (default `"0.05"`) |
+| `maxPriceImpact` | Optional | Max price impact as a decimal string (default `"0.05"`) |
+
+Market orders do not accept `limitNotionalPrice`, `expireTime`, or `triggers`. The onchain deadline is set automatically (roughly 5 minutes from quote time).
+
+## End-to-end example
+
+<Note>
+**Prerequisites.** EVM examples use [`viem`](https://viem.sh); Solana examples use `@solana/web3.js`, `tweetnacl`, and `bs58`. All requests go to `https://flash.definitive.fi/v1` with your key in the `x-definitive-api-key` header. The public integrator key `dpka_513a2bd7_57a2_46d2_927b_2a3857fe271b` is safe for development. The onchain steps (token approval on EVM, delegation on Solana) also need an RPC endpoint and the funder wallet's key, supplied here through environment variables.
+</Note>
+
+<AccordionGroup>
+  <Accordion title="EVM" defaultOpen>
+    Buy WETH with 100 USDC on Base, with 5% slippage protection. If the spent token needs an allowance, the quote returns `evm.approveTx` (or `evm.permitTypedData` on the Permit2 path); submit or sign whichever it returns, then sign the order payload and submit.
+
+    ```ts
+    import { createWalletClient, createPublicClient, http } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { base } from "viem/chains";
+
+    const BASE_URL = "https://flash.definitive.fi/v1";
+    const API_KEY = "dpka_513a2bd7_57a2_46d2_927b_2a3857fe271b";
+
+    const account = privateKeyToAccount(process.env.EVM_PRIVATE_KEY as `0x${string}`);
+    const wallet = createWalletClient({ account, chain: base, transport: http(process.env.EVM_RPC_URL) });
+    const publicClient = createPublicClient({ chain: base, transport: http(process.env.EVM_RPC_URL) });
+
+    const post = (path: string, body: unknown) =>
+      fetch(`${BASE_URL}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-definitive-api-key": API_KEY },
+        body: JSON.stringify(body),
+      }).then((r) => r.json());
+
+    const order = {
+      targetChain: "base",
+      contraChain: "base",
+      targetAsset: "0x4200000000000000000000000000000000000006", // WETH
+      contraAsset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC
+      side: "buy",
+      qty: "100",
+      orderType: "market",
+      maxSlippage: "0.05",
+    };
+
+    const quote = await post("/quote", { ...order, funderAddress: account.address });
+
+    if (quote.evm.approveTx) {
+      const hash = await wallet.sendTransaction({
+        to: quote.evm.approveTx.to,
+        data: quote.evm.approveTx.data,
+        value: 0n,
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+    }
+
+    let permitFields = {};
+    if (quote.evm.permitTypedData) {
+      const evmPermitSignature = await account.signTypedData(JSON.parse(quote.evm.permitTypedData));
+      permitFields = { evmPermitTypedData: quote.evm.permitTypedData, evmPermitSignature };
+    }
+
+    const { domain, types, primaryType, message } = JSON.parse(quote.evm.orderTypedData);
+    const userSignature = await account.signTypedData({ domain, types, primaryType, message });
+
+    const { orderId } = await post("/order", {
+      ...order,
+      funderAddress: account.address,
+      quoteId: quote.quoteId,
+      userSignature,
+      evmOrderTypedData: quote.evm.orderTypedData,
+      ...permitFields,
+    });
+
+    console.log("orderId", orderId);
+    ```
+  </Accordion>
+  <Accordion title="SVM (Solana)" defaultOpen>
+    Buy WSOL with 100 USDC. Before the first trade of a token the swap needs the funder's token accounts (`svm.ataSetupIxs`) and a delegation (`svm.delegateIx` or a sponsor-paid `svm.sponsoredDelegateTx`). Run the onchain steps in order, then sign the order message offchain and submit.
+
+    ```ts
+    import {
+      Connection,
+      Keypair,
+      PublicKey,
+      TransactionInstruction,
+      TransactionMessage,
+      VersionedTransaction,
+    } from "@solana/web3.js";
+    import nacl from "tweetnacl";
+    import bs58 from "bs58";
+
+    const BASE_URL = "https://flash.definitive.fi/v1";
+    const API_KEY = "dpka_513a2bd7_57a2_46d2_927b_2a3857fe271b";
+
+    const connection = new Connection(process.env.SOLANA_RPC_URL!, "confirmed");
+    const funder = Keypair.fromSecretKey(bs58.decode(process.env.SOLANA_SECRET_KEY!));
+
+    const post = (path: string, body: unknown) =>
+      fetch(`${BASE_URL}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-definitive-api-key": API_KEY },
+        body: JSON.stringify(body),
+      }).then((r) => r.json());
+
+    const toIx = (ix: any) =>
+      new TransactionInstruction({
+        programId: new PublicKey(ix.programId),
+        keys: ix.accounts.map((a: any) => ({
+          pubkey: new PublicKey(a.pubkey),
+          isSigner: a.isSigner,
+          isWritable: a.isWritable,
+        })),
+        data: Buffer.from(bs58.decode(ix.data)),
+      });
+
+    async function sendIxs(instructions: any[]) {
+      const { blockhash } = await connection.getLatestBlockhash();
+      const message = new TransactionMessage({
+        payerKey: funder.publicKey,
+        recentBlockhash: blockhash,
+        instructions: instructions.map(toIx),
+      }).compileToV0Message();
+      const tx = new VersionedTransaction(message);
+      tx.sign([funder]);
+      const sig = await connection.sendRawTransaction(tx.serialize());
+      await connection.confirmTransaction(sig, "confirmed");
+    }
+
+    const order = {
+      targetChain: "solana",
+      contraChain: "solana",
+      targetAsset: "So11111111111111111111111111111111111111112", // WSOL
+      contraAsset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
+      side: "buy",
+      qty: "100",
+      orderType: "market",
+      maxSlippage: "0.05",
+    };
+
+    const quote = await post("/quote", { ...order, funderAddress: funder.publicKey.toBase58() });
+
+    if (quote.svm.ataSetupIxs) await sendIxs(quote.svm.ataSetupIxs);
+
+    let delegateFields = {};
+    if (quote.svm.sponsoredDelegateTx) {
+      const tx = VersionedTransaction.deserialize(Buffer.from(quote.svm.sponsoredDelegateTx, "base64"));
+      tx.sign([funder]);
+      delegateFields = { svmSponsoredDelegateTx: Buffer.from(tx.serialize()).toString("base64") };
+    } else if (quote.svm.delegateIx) {
+      await sendIxs([quote.svm.delegateIx]);
+    }
+
+    const signature = nacl.sign.detached(new TextEncoder().encode(quote.svm.orderMessage), funder.secretKey);
+    const userSignature = bs58.encode(signature);
+
+    const { orderId } = await post("/order", {
+      ...order,
+      funderAddress: funder.publicKey.toBase58(),
+      quoteId: quote.quoteId,
+      userSignature,
+      svmNonce: quote.svm.nonce,
+      svmDeadline: quote.svm.deadline,
+      ...delegateFields,
+    });
+
+    console.log("orderId", orderId);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+To sell instead, set `side` to `"sell"` and denominate `qty` in the target asset (for example `"0.05"` to sell 0.05 WETH). Everything else stays the same.
+
+<Note>
+To track the order after submit, poll `GET /orders` or stream live updates over the [Orders WebSocket](/api-reference/flash/websocket).
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Limit Order" icon="chart-line" href="/limit-order">
+    Fill only at a set price or better.
+  </Card>
+  <Card title="Placing Orders" icon="book" href="/placing-orders">
+    The full parameter reference for every order type.
+  </Card>
+</CardGroup>
