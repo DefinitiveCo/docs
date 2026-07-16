@@ -38,7 +38,16 @@ Three steps: quote → sign → submit. The walkthrough below covers both EVM ch
 `POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset` (with matching `targetChain` / `contraChain` — same-chain only), `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`. Also pass `funderAddress`, the wallet that will sign and fund the order, so Flash can build the signing payloads. The payload encodes the signer's address, so omitting it returns an empty signing payload (an empty `evm.orderTypedData` on EVM, a null `svm.orderMessage` on Solana). On EVM, asset and wallet addresses are hex (`0x...`); on Solana, they are base58 mint and wallet addresses. If you charge an integrator fee, include `flashIntegratorFeeBps` and send the same value on `POST /order`.
 
 <Note>
-Native assets cannot be swapped directly. Wrap them into their tokenized equivalent first (for example WETH on EVM chains, or WSOL on Solana), then reference that token by address.
+You can spend a native gas asset two ways, and both settle against the wrapped token.
+
+**Wrap first.** Wrap it yourself, then quote and submit against the wrapped token address like any other token.
+
+**Quote native.** Quote with the native asset and Flash returns a `wrap` action to send from `funderAddress` before submitting.
+
+- **EVM.** Quote with `0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee` as the spent asset, send the returned `wrap.evmTx`, then submit using the wrapped-native asset returned by the quote.
+- **Solana.** Quote with `So11111111111111111111111111111111111111112` as the spent asset and `svmUseNativeSOL: true`, then send the returned `wrap.svmInstructions` before submitting. Omit the flag and the mint is treated as an ordinary wSOL balance (the wrap-first path).
+
+See [EVM native assets](/evm-overview#native-eth-and-wrapped-assets) and [Solana native SOL](/solana-overview#native-sol-and-wsol).
 </Note>
 
 Returns:
@@ -46,6 +55,7 @@ Returns:
 - `quoteId` — echo back on submit to lock pricing
 - `from` / `to` — directional legs, each with `asset` (`"target"` or `"contra"`), `amount`, and `notional`
 - `fees.estimatedFeeNotional` — total fee in USD notional
+- `wrap` *(conditional)* — pre-trade wrapping action, present only when the quote spends a native gas asset
 
 Plus chain-specific signing payloads (the other block is always null):
 
