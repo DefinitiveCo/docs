@@ -55,7 +55,7 @@ Returns:
 - `quoteId` — echo back on submit to lock pricing
 - `from` / `to` — directional legs, each with `asset` (`"target"` or `"contra"`), `amount`, and `notional`
 - `fees.estimatedFeeNotional` — total fee in USD notional
-- `wrap` *(conditional)* — pre-trade wrapping action, present only when the quote spends a native gas asset
+- `wrap` — pre-trade wrapping action, always present but null unless the quote spends a native gas asset
 
 Plus chain-specific signing payloads (the other block is always null):
 
