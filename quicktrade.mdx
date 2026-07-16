@@ -1,0 +1,79 @@
+---
+title: QuickTrade
+description: QuickTrade is a low-latency execution mode for market orders, built for entering fast-moving and newly launched tokens. It trades fresh quoting for speed by reusing pre-computed quotes and executing aggressively to land the fill.
+---
+
+QuickTrade is an execution mode for **market orders** that optimizes for speed of execution over price. It is designed for entering fast-moving markets, such as sniping newly launched tokens, where landing the fill quickly matters more than getting the tightest possible price.
+
+You enable it with a single flag on the order request:
+
+```jsonc
+{
+  "targetChain": "base",
+  "contraChain": "base",
+  "targetAsset": "0x4200000000000000000000000000000000000006", // WETH
+  "contraAsset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC
+  "side": "buy",
+  "qty": "100",
+  "orderType": "market",
+  "quickTrade": true
+}
+```
+
+<Note>
+  QuickTrade is a partner feature. [Reach out](https://www.definitive.fi/flash-api#contact) to the Definitive team to find out whether it is a good fit for your use case and to enable it on your API key.
+</Note>
+
+## Why it is fast
+
+A normal market order fetches a fresh quote at submission time, then simulates and routes it before execution. QuickTrade removes that round trip:
+
+- **Reusable quotes.** QuickTrade executes against a recently computed quote instead of fetching a new one. Quotes are pre-populated by the quote/preview endpoint (which clients typically call in the background) and reused for a short window, so a submit can skip straight to execution. Under the hood the cached quote's calldata is rewritten to your exact amount.
+- **Aggressive execution.** QuickTrade uses a more aggressive slippage schedule and prioritizes gas so the transaction lands quickly and reliably in competitive blocks, rather than retrying its way in.
+
+The result is meaningfully lower submit-to-execution latency, at the cost of the price trade-offs described below.
+
+## When to use it
+
+Use QuickTrade when time-to-fill is the priority:
+
+- Entering a newly launched token where the market is moving within seconds.
+- Any market buy or sell where a certain, fast fill is worth more than shaving basis points off the price.
+
+Use a standard market order (omit `quickTrade`) when you want the tightest price and can tolerate normal quoting latency.
+
+## Trade-offs
+
+QuickTrade optimizes for landing the fill, so you accept:
+
+- **A wider effective price.** The aggressive slippage schedule tolerates more slippage to avoid slippage-based retries. Your `maxSlippage` and `maxPriceImpact` bounds still apply — if the fill cannot meet them, no funds move.
+- **Higher gas.** QuickTrade prioritizes gas to land the transaction faster, so gas costs are higher than a standard market order.
+- **A slightly older quote.** Because execution reuses a recent quote rather than pulling a fresh one, the reference price can be marginally staler than a standard order.
+
+## Constraints
+
+| Rule | Detail |
+| --- | --- |
+| Market orders only | `quickTrade` is rejected on any non-market order type (`limit`, `twap`, `stop`, `stop-loss`, `take-profit`, `bracket`). |
+| Not combinable with degen mode | `quickTrade` and aggressive/degen execution cannot be set on the same order. |
+| Shorter working window | QuickTrade market orders use a shorter default expiry than standard market orders, matching the snipe-now-or-skip intent. |
+
+## Field reference
+
+| Field | Type | Applies to | Meaning |
+| --- | --- | --- | --- |
+| `quickTrade` | boolean | Market orders only | Enable low-latency execution mode. Defaults to `false`. |
+
+<Tip>
+  Pre-warm the quote path for the assets you plan to trade by requesting quotes ahead of time. QuickTrade reuses those recent quotes, so a quote already in hand is what makes the submit fast.
+</Tip>
+
+<CardGroup cols={2}>
+  <Card title="Placing Orders" icon="list-check" href="/placing-orders">
+    The target/contra framework and every order parameter, including where `quickTrade` fits.
+  </Card>
+
+  <Card title="Order Statuses" icon="signal" href="/order-statuses">
+    How orders transition between statuses and the reason codes for cancels and rejects.
+  </Card>
+</CardGroup>

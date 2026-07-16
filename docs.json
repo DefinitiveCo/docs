@@ -63,6 +63,7 @@
               "supported-chains",
               "rate-limits",
               "order-statuses",
+              "quicktrade",
               "error-codes"
             ]
           }
