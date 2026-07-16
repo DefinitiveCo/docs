@@ -1,0 +1,201 @@
+---
+title: "TWAP Order"
+description: "End-to-end TWAP order on EVM and Solana. Quote, sign, and submit with runnable TypeScript."
+---
+
+A TWAP (time-weighted average price) order slices one large order into tranches executed over a set duration, reducing price impact. Set the total duration with `durationSeconds`; Flash converts it into the onchain deadline with a 60-second execution buffer. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
+
+This page shows the full flow end to end (quote, sign, submit) as a runnable script for each chain. Both examples sell over one hour: WETH for USDC on Base, and WSOL for USDC on Solana. The signing and submit plumbing is identical to a market order; only the request fields differ.
+
+## TWAP parameters
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `orderType` | Yes | `"twap"` |
+| `side` | Yes | `"buy"` or `"sell"` |
+| `qty` | Yes | Total spend amount, as a string. Contra units on a buy, target units on a sell |
+| `durationSeconds` | Yes | Total duration in seconds. Minimum 300 (5 minutes) |
+| `twapBucketCount` | Optional | Number of tranches, between 2 and 2560 |
+
+TWAP orders do not accept `limitNotionalPrice`, `expireTime`, or `triggers`. Progress is surfaced on the order status through `twapBucketCount` and `completedFillCount`.
+
+## End-to-end example
+
+<Note>
+**Prerequisites.** EVM examples use [`viem`](https://viem.sh); Solana examples use `@solana/web3.js`, `tweetnacl`, and `bs58`. All requests go to `https://flash.definitive.fi/v1` with your key in the `x-definitive-api-key` header. The public integrator key `dpka_513a2bd7_57a2_46d2_927b_2a3857fe271b` is safe for development. The onchain steps also need an RPC endpoint and the funder wallet's key, supplied here through environment variables.
+</Note>
+
+<AccordionGroup>
+  <Accordion title="EVM" defaultOpen>
+    Sell 5 WETH for USDC on Base, spread over one hour. On a sell, `qty` is denominated in the target asset (WETH). If the spent token needs an allowance, the quote returns `evm.approveTx` (or `evm.permitTypedData` on the Permit2 path); handle whichever it returns, then sign the order payload and submit.
+
+    ```ts
+    import { createWalletClient, createPublicClient, http } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { base } from "viem/chains";
+
+    const BASE_URL = "https://flash.definitive.fi/v1";
+    const API_KEY = "dpka_513a2bd7_57a2_46d2_927b_2a3857fe271b";
+
+    const account = privateKeyToAccount(process.env.EVM_PRIVATE_KEY as `0x${string}`);
+    const wallet = createWalletClient({ account, chain: base, transport: http(process.env.EVM_RPC_URL) });
+    const publicClient = createPublicClient({ chain: base, transport: http(process.env.EVM_RPC_URL) });
+
+    const post = (path: string, body: unknown) =>
+      fetch(`${BASE_URL}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-definitive-api-key": API_KEY },
+        body: JSON.stringify(body),
+      }).then((r) => r.json());
+
+    const order = {
+      targetChain: "base",
+      contraChain: "base",
+      targetAsset: "0x4200000000000000000000000000000000000006", // WETH
+      contraAsset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC
+      side: "sell",
+      qty: "5",
+      orderType: "twap",
+    };
+
+    // durationSeconds is a quote-time field, so it is not echoed on submit
+    const quote = await post("/quote", { ...order, durationSeconds: 3600, funderAddress: account.address });
+
+    if (quote.evm.approveTx) {
+      const hash = await wallet.sendTransaction({
+        to: quote.evm.approveTx.to,
+        data: quote.evm.approveTx.data,
+        value: 0n,
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+    }
+
+    let permitFields = {};
+    if (quote.evm.permitTypedData) {
+      const evmPermitSignature = await account.signTypedData(JSON.parse(quote.evm.permitTypedData));
+      permitFields = { evmPermitTypedData: quote.evm.permitTypedData, evmPermitSignature };
+    }
+
+    const { domain, types, primaryType, message } = JSON.parse(quote.evm.orderTypedData);
+    const userSignature = await account.signTypedData({ domain, types, primaryType, message });
+
+    const { orderId } = await post("/order", {
+      ...order,
+      funderAddress: account.address,
+      quoteId: quote.quoteId,
+      userSignature,
+      evmOrderTypedData: quote.evm.orderTypedData,
+      ...permitFields,
+    });
+
+    console.log("orderId", orderId);
+    ```
+  </Accordion>
+  <Accordion title="SVM (Solana)" defaultOpen>
+    Sell 5 WSOL for USDC, spread over one hour. On a sell, `qty` is denominated in the target asset (WSOL). Before the first trade of a token the swap needs the funder's token accounts (`svm.ataSetupIxs`) and a delegation (`svm.delegateIx` or a sponsor-paid `svm.sponsoredDelegateTx`). Run the onchain steps in order, then sign the order message offchain and submit.
+
+    ```ts
+    import {
+      Connection,
+      Keypair,
+      PublicKey,
+      TransactionInstruction,
+      TransactionMessage,
+      VersionedTransaction,
+    } from "@solana/web3.js";
+    import nacl from "tweetnacl";
+    import bs58 from "bs58";
+
+    const BASE_URL = "https://flash.definitive.fi/v1";
+    const API_KEY = "dpka_513a2bd7_57a2_46d2_927b_2a3857fe271b";
+
+    const connection = new Connection(process.env.SOLANA_RPC_URL!, "confirmed");
+    const funder = Keypair.fromSecretKey(bs58.decode(process.env.SOLANA_SECRET_KEY!));
+
+    const post = (path: string, body: unknown) =>
+      fetch(`${BASE_URL}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-definitive-api-key": API_KEY },
+        body: JSON.stringify(body),
+      }).then((r) => r.json());
+
+    const toIx = (ix: any) =>
+      new TransactionInstruction({
+        programId: new PublicKey(ix.programId),
+        keys: ix.accounts.map((a: any) => ({
+          pubkey: new PublicKey(a.pubkey),
+          isSigner: a.isSigner,
+          isWritable: a.isWritable,
+        })),
+        data: Buffer.from(bs58.decode(ix.data)),
+      });
+
+    async function sendIxs(instructions: any[]) {
+      const { blockhash } = await connection.getLatestBlockhash();
+      const message = new TransactionMessage({
+        payerKey: funder.publicKey,
+        recentBlockhash: blockhash,
+        instructions: instructions.map(toIx),
+      }).compileToV0Message();
+      const tx = new VersionedTransaction(message);
+      tx.sign([funder]);
+      const sig = await connection.sendRawTransaction(tx.serialize());
+      await connection.confirmTransaction(sig, "confirmed");
+    }
+
+    const order = {
+      targetChain: "solana",
+      contraChain: "solana",
+      targetAsset: "So11111111111111111111111111111111111111112", // WSOL
+      contraAsset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
+      side: "sell",
+      qty: "5",
+      orderType: "twap",
+    };
+
+    // durationSeconds is a quote-time field, so it is not echoed on submit
+    const quote = await post("/quote", { ...order, durationSeconds: 3600, funderAddress: funder.publicKey.toBase58() });
+
+    if (quote.svm.ataSetupIxs) await sendIxs(quote.svm.ataSetupIxs);
+
+    let delegateFields = {};
+    if (quote.svm.sponsoredDelegateTx) {
+      const tx = VersionedTransaction.deserialize(Buffer.from(quote.svm.sponsoredDelegateTx, "base64"));
+      tx.sign([funder]);
+      delegateFields = { svmSponsoredDelegateTx: Buffer.from(tx.serialize()).toString("base64") };
+    } else if (quote.svm.delegateIx) {
+      await sendIxs([quote.svm.delegateIx]);
+    }
+
+    const signature = nacl.sign.detached(new TextEncoder().encode(quote.svm.orderMessage), funder.secretKey);
+    const userSignature = bs58.encode(signature);
+
+    const { orderId } = await post("/order", {
+      ...order,
+      funderAddress: funder.publicKey.toBase58(),
+      quoteId: quote.quoteId,
+      userSignature,
+      svmNonce: quote.svm.nonce,
+      svmDeadline: quote.svm.deadline,
+      ...delegateFields,
+    });
+
+    console.log("orderId", orderId);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+To buy instead, set `side` to `"buy"` and denominate `qty` in the contra asset (for example `"1000"` USDC). Add `twapBucketCount` to control how many tranches the order is split into.
+
+<Note>
+To track fill progress after submit, poll `GET /orders` or stream live updates over the [Orders WebSocket](/api-reference/flash/websocket). TWAP orders report `completedFillCount` against `twapBucketCount`.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Trigger Orders" icon="bell" href="/trigger-orders">
+    Stop, stop-loss, and take-profit orders.
+  </Card>
+  <Card title="Market Order" icon="bolt" href="/market-order">
+    Execute immediately at the best price.
+  </Card>
+</CardGroup>

@@ -74,6 +74,15 @@
           {
             "group": "Agents",
             "pages": ["for-agents"]
+          },
+          {
+            "group": "End-To-End Flows",
+            "pages": [
+              "market-order",
+              "limit-order",
+              "twap-order",
+              "trigger-orders"
+            ]
           }
         ]
       },
