@@ -14,14 +14,14 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
     On EVM, Flash uses one of two allowance mechanisms: a direct ERC-20 approval to the settlement contract, or Permit2. The quote response tells you which applies. The user signs up to three things depending on the flow:
 
     1. A **one-time ERC-20 approval** (`approveTx`) granting allowance the first time a wallet trades a given token. Its spender is the settlement contract, or the Permit2 contract when the order uses Permit2. Subsequent orders for the same token skip this step.
-    2. A **Permit2 signature** (`permitTypedData`), present only when the order uses Permit2. Gasless, off-chain, signed per order.
-    3. A **Flash order signature** (`orderTypedData`), an EIP-712 payload authorizing the specific trade. Gasless, off-chain, signed per order. Always required.
+    2. A **Permit2 signature** (`permitTypedData`), present only when the order uses Permit2. Gasless, offchain, signed per order.
+    3. A **Flash order signature** (`orderTypedData`), an EIP-712 payload authorizing the specific trade. Gasless, offchain, signed per order. Always required.
 
-    Our contract validates these signatures on-chain at execution time. Users can revoke the approval or cancel the order at any point, which removes our ability to pull funds.
+    Our contract validates these signatures onchain at execution time. Users can revoke the approval or cancel the order at any point, which removes our ability to pull funds.
   </Accordion>
 
   <Accordion title="How do approvals work on Solana?">
-    On Solana, the user sets Definitive as a token delegate. The user also signs an off-chain payload using a standard signature scheme. We've deployed a Solana program that verifies this signature before pulling funds. Optional deadlines can be added (for example, expiring an order after one month). Users can revoke delegate authority at any time.
+    On Solana, the user sets Definitive as a token delegate. The user also signs an offchain payload using a standard signature scheme. We've deployed a Solana program that verifies this signature before pulling funds. Optional deadlines can be added (for example, expiring an order after one month). Users can revoke delegate authority at any time.
   </Accordion>
 </AccordionGroup>
 
@@ -33,11 +33,11 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
   </Accordion>
 
   <Accordion title="Do you support notional (USD-denominated) prices for trade orders?">
-    Yes. Most other swap platforms and order systems require cross-rate pricing (e.g., "sell when TOKEN/ETH hits X"), which is difficult for users to reason about and compute. We support notional pricing for all of our order types. For example, you can set a limit like "sell when TOKEN drops below $1.00."
+    Yes. Most other swap platforms and order systems require cross-rate pricing (e.g., "sell when TOKEN/ETH hits X"), which is difficult for users to reason about and compute. We support notional pricing for all of our order types. For example, you can set a limit like "sell when TOKEN drops below \$1.00."
   </Accordion>
 
   <Accordion title="Who submits the transaction to the chain?">
-    We do. After you sign a quote and pass it to us, our execution infrastructure (called "performers") lands the transaction on-chain. This is a key value add: we handle MEV protection, gas optimization, dynamic gas pricing during congestion, and transaction retry logic so you don't have to.
+    We do. After you sign a quote and pass it to us, our execution infrastructure (called "performers") lands the transaction onchain. This is a key value add: we handle MEV protection, gas optimization, dynamic gas pricing during congestion, and transaction retry logic so you don't have to.
   </Accordion>
 </AccordionGroup>
 
@@ -45,11 +45,11 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
 
 <AccordionGroup>
   <Accordion title="How do you protect against MEV attacks like sandwich attacks and front-running?">
-    Several layers. First, all order intents are stored off-chain, so they aren't visible on-chain before execution. Second, we route through MEV-protection endpoints when available. Third, our trade engine sets tight slippage tolerances, making sandwiching economically unviable. If a sandwich attempt pushes the price outside our slippage threshold, the transaction reverts automatically. All of these configurations are done dynamically by Flash's trade engine based on current market conditions.
+    Several layers. First, all order intents are stored offchain, so they aren't visible onchain before execution. Second, we route through MEV-protection endpoints when available. Third, our trade engine sets tight slippage tolerances, making sandwiching economically unviable. If a sandwich attempt pushes the price outside our slippage threshold, the transaction reverts automatically. All of these configurations are done dynamically by Flash's trade engine based on current market conditions.
   </Accordion>
 
   <Accordion title="Do you simulate trades before execution?">
-    Yes, twice. At quote time, we simulate the trade against on-chain state to ensure the quoted output is achievable (not just pool-math estimates). Then, immediately before execution, we simulate again against the latest chain state to validate the fill and abort if the simulation reverts.
+    Yes, twice. At quote time, we simulate the trade against onchain state to ensure the quoted output is achievable (not just pool-math estimates). Then, immediately before execution, we simulate again against the latest chain state to validate the fill and abort if the simulation reverts.
   </Accordion>
 </AccordionGroup>
 
@@ -57,17 +57,19 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
 
 <AccordionGroup>
   <Accordion title="Which chains do you support?">
-    All major EVM chains plus Solana: Ethereum, Base, Arbitrum, Avalanche, BNB Chain, HyperEVM, Monad, Optimism, Plasma, Polygon, and Robinhood. If there's an EVM chain we don't yet support that you need, we're happy to work with you to add it.
+    All major EVM chains plus Solana: Ethereum, Base, Robinhood, Arbitrum, Avalanche, BNB Chain, HyperEVM, Monad, Optimism, Plasma, and Polygon. If there's an EVM chain we don't yet support that you need, we're happy to work with you to add it.
   </Accordion>
 
-  <Accordion title="Can I trade RWAs (real-world assets) like tokenized gold?">
-    Yes. As long as the RWA token is on a supported chain and has on-chain liquidity, we'll have a quote for it.
+  <Accordion title="Can I trade RWAs (real-world assets) like tokenized equities?">
+    Yes. As long as the RWA token is on a supported chain and has onchain liquidity, we'll have a quote for it.
   </Accordion>
 
   <Accordion title="Can I swap native assets like ETH or SOL directly?">
     It depends on the chain and direction. On EVM chains, you can receive native ETH or the chain's native gas asset as the output of a trade by using `0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee` as the received asset.
 
-    To spend a native gas asset on EVM, quote with `0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee` as the spent asset, send the returned `wrap.evmTx`, then submit using the wrapped-native asset returned by the quote. On Solana, quote native SOL input with `So11111111111111111111111111111111111111112` as the spent asset and `svmUseNativeSOL: true`; send the returned `wrap.svmInstructions` before submitting. Solana output to `So11111111111111111111111111111111111111112` is wSOL, not native SOL.
+    To spend a native gas asset on EVM, quote with `0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee` as the spent asset, send the returned `wrap.evmTx`, then submit using the wrapped-native asset returned by the quote. 
+
+    On Solana, quote native SOL input with `So11111111111111111111111111111111111111112` as the spent asset and `svmUseNativeSOL: true`; send the returned `wrap.svmInstructions` before submitting. Solana output to `So11111111111111111111111111111111111111112` is wSOL, not native SOL.
   </Accordion>
 </AccordionGroup>
 
@@ -83,7 +85,7 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
   </Accordion>
 
   <Accordion title="Is there a sandbox or testnet environment?">
-    We recommend testing on a production chain like Base or Solana using small amounts. We've found this is more reliable than testnets, which often have inaccurate gas behavior and omit nuances of live trading.
+    We recommend testing on a production chain like Base or Solana using small amounts. We've found this is more reliable than testnets, which often have unrealistic gas behavior and omit nuances of live trading.
   </Accordion>
 
   <Accordion title="Have your contracts been audited?">
@@ -115,11 +117,11 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
   </Accordion>
 
   <Accordion title="Does the approval transaction need to come from the funderAddress?">
-    Yes. The on-chain ERC-20 approval must be sent from the `funderAddress` specified in the order. This is a one-time transaction per user per token.
+    Yes. The onchain ERC-20 approval must be sent from the `funderAddress` specified in the order. This is a one-time transaction per user per token.
   </Accordion>
 
   <Accordion title="Can I batch the approval transaction with the EIP-712 order signature in a single user interaction?">
-    No. The approval is an on-chain transaction, while the order signature is a gasless off-chain payload. They're fundamentally different operations. However, the approval only needs to happen once per user per token, so subsequent orders for the same token skip this step entirely.
+    No. The approval is an onchain transaction, while the order signature is a gasless offchain payload. They're fundamentally different operations. However, the approval only needs to happen once per user per token, so subsequent orders for the same token skip this step entirely.
   </Accordion>
 
   <Accordion title="Is the Permit2 spender locked to the Flash settlement contract?">

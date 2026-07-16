@@ -3,7 +3,7 @@ title: "Non-Custodial"
 description: "Definitive Flash API never takes custody of your users' funds, even for conditional trade orders. Here is how advanced orders work on Flash while remaining fully non-custodial."
 ---
 
-Definitive Flash API executes advanced order types (Limit, TWAP, Stop Loss, Take Profit, Bracket) without ever taking custody of user funds. Tokens stay in the user's wallet until the exact moment a trade executes, and if it fails they never move. There is no intermediate holding period, no fund transfers to a separate account, and no shared pools.
+Definitive Flash API executes advanced order types (Limit, TWAP, Stop Loss, Take Profit) without ever taking custody of user funds. Tokens stay in the user's wallet until the exact moment a trade executes, and if it fails they never move. There is no intermediate holding contract, no fund transfers to a separate account, and no shared pools.
 
 This is different from other trading APIs that require users to move funds into a smart contract or wallet before placing advanced orders.
 
@@ -27,7 +27,7 @@ For each order, the user signs an offchain payload that commits to the specific 
 The signed order is the primary security control. It caps the amount Flash can pull to exactly what the order specifies and includes an expiration verified onchain (by the settlement contract on EVM, by Flash's program on Solana). Even with an unlimited approval or delegate, Flash cannot execute a swap for more than the signed order authorizes, and cannot execute after the deadline has passed.
 
 <Note>
-A Flash order signature authorizes an input debit, not a guaranteed receive amount. It binds the token, total amount, recipient, and deadline that Flash may pull from the wallet, but it does not encode a minimum output. A single signed order may also be filled across more than one transaction, each drawing part of the authorized total, so one signature can authorize multiple onchain debits up to the signed amount. Integrators should treat the signature as authorization to spend the input, and rely on Flash's offchain execution controls (not the signature) for output protection.
+  A Flash order signature authorizes an input debit, not a guaranteed receive amount. It binds the token, total amount, recipient, and deadline that Flash may pull from the wallet, but it does not encode a minimum output. A single signed order may also be filled across more than one transaction, each drawing part of the authorized total, so one signature can authorize multiple onchain debits up to the signed amount. Integrators should treat the signature as authorization to spend the input, and rely on Flash's offchain execution controls (not the signature) for output protection.
 </Note>
 
 Flash stores this signed payload in its execution system. For a market order, execution is immediate. For a limit order, TWAP, or other conditional order, Flash's trading engine continuously evaluates market pricing. When the order's conditions are met, Flash submits a transaction that pulls the authorized tokens from the user's wallet, executes the swap through the best available route with a minimum-output bound applied by Flash's execution engine, and settles the output tokens back to the user's wallet.
@@ -45,13 +45,13 @@ Flash's limit orders are held offchain, not exposed onchain. This means they are
 A user has two independent ways to stop Flash from executing, available at any time:
 
 1. **Cancel an order.** Sign a cancel message (an EIP-191 `personal_sign` message on EVM, or an Ed25519 message on Solana) and submit it to [`POST /orders/{orderId}/cancel`](/api-reference/flash/cancel). The order is immediately marked as cancelled and taken out of the execution queue, so Flash will never attempt to fill it. The onchain approval or delegate is left untouched and remains in place, reusable for future orders.
-
 2. **Revoke the approval (onchain).** Revoke the token approval directly from the wallet: a standard SPL-Token `Revoke` on Solana, or revoking the ERC-20 or Permit2 allowance on EVM. This removes Flash's delegate or spending authority entirely, so Flash can no longer pull that token for any order, regardless of any outstanding signed payloads. It is a standard onchain wallet action with no Definitive endpoint.
 
 <CardGroup cols={2}>
   <Card title="EVM Overview" icon="cube" href="/evm-overview">
     How quoting, routing, and signing work on EVM.
   </Card>
+
   <Card title="Security & Audits" icon="shield-halved" href="/security">
     Audit reports, MEV protection, and platform architecture.
   </Card>

@@ -14,7 +14,7 @@ Flash API uses a target/contra framework to define every trade. Understanding th
 Both legs of the pair must be on the same chain, so `targetChain` and `contraChain` are the same value. Assets are always referenced by address, not symbol.
 
 <Note>
-Native asset behavior is chain-specific. If you spend a native gas asset, request a quote through that chain's native-asset flow, send the returned `wrap` action, then submit with the wrapped-native asset from the quote. See [EVM native assets](/evm-overview#native-eth-and-wrapped-assets) and [Solana native SOL](/solana-overview#native-sol-and-wsol).
+  Native asset behavior is chain-specific. If you spend a native gas asset, request a quote through that chain's native-asset flow, send the returned `wrap` action, then submit with the wrapped-native asset from the quote. See [EVM native assets](/evm-overview#native-eth-and-wrapped-assets) and [Solana native SOL](/solana-overview#native-sol-and-wsol).
 </Note>
 
 ## How `qty` works
@@ -30,7 +30,7 @@ Buy `qty` is always denominated in the contra asset. Sell `qty` is always denomi
 
 ## Notional pricing
 
-All price fields in Flash are expressed as the **USD notional value of the target asset**. If WETH is trading at $4,000 per WETH, the notional price is `"4000"`. Quote responses also report each leg's `notional` and the estimated fee in USD.
+All price fields in Flash are expressed as the **USD notional value of the target asset**. If WETH is trading at \$4,000 per WETH, the notional price is `"4000"`. Quote responses also report each leg's `notional` and the estimated fee in USD.
 
 ## Price protection on market orders
 
@@ -42,7 +42,7 @@ Flash enforces slippage offchain through its execution engine. If the swap canno
 
 QuickTrade is an execution mode for sniping newly launched tokens, exclusive to market swaps.
 
-Reach out to the Definitive team to find out whether QuickTrade is a good fit for your use case.
+[Reach out](https://www.definitive.fi/flash-api#contact) to the Definitive team to find out whether QuickTrade is a good fit for your use case.
 
 ## Limit pricing
 
@@ -104,9 +104,9 @@ The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset).
 }
 ```
 
-**Limit buy: buy WETH at $1,000 or better**
+**Limit buy: buy WETH at \$1,000 or better**
 
-The `qty` is `"100"`, meaning spend up to 100 USDC. The order executes only when WETH is available at $1,000 per WETH or lower.
+The `qty` is `"100"`, meaning spend up to 100 USDC. The order executes only when WETH is available at \$1,000 per WETH or lower.
 
 ```jsonc
 {
@@ -121,9 +121,9 @@ The `qty` is `"100"`, meaning spend up to 100 USDC. The order executes only when
 }
 ```
 
-**Limit sell: sell WETH at $4,000 or better**
+**Limit sell: sell WETH at \$4,000 or better**
 
-The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset). The order executes only when WETH reaches $4,000 per WETH or higher.
+The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset). The order executes only when WETH reaches \$4,000 per WETH or higher.
 
 ```jsonc
 {
@@ -139,7 +139,7 @@ The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset). The order executes
 ```
 
 <Tip>
-The snippets above are request bodies. For complete, runnable end-to-end scripts (quote, sign, and submit) on both EVM and Solana, see the End-To-End Flows under AI Integration: [Market](/market-order), [Limit](/limit-order), [TWAP](/twap-order), and [Trigger orders](/trigger-orders).
+  The snippets above are request bodies. For complete, runnable end-to-end scripts (quote, sign, and submit) on both EVM and Solana, see the End-To-End Flows under AI Integration: [Market](/market-order), [Limit](/limit-order), [TWAP](/twap-order), and [Trigger orders](/trigger-orders).
 </Tip>
 
 ## Quick reference
@@ -164,6 +164,7 @@ The snippets above are request bodies. For complete, runnable end-to-end scripts
   <Card title="EVM Overview" icon="cube" href="/evm-overview">
     How quoting, routing, and signing work on EVM.
   </Card>
+
   <Card title="Non-Custodial by Design" icon="shield-halved" href="/non-custodial">
     How Flash keeps funds in the user's wallet for every order type.
   </Card>
