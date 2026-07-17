@@ -11,6 +11,36 @@ Machine-readable references:
 - [`/llms-full.txt`](/llms-full.txt) — all docs concatenated into one file. Best for pasting into a prompt or uploading as a single context file.
 - [`/openapi.json`](https://flash.definitive.fi/v1/openapi.json) — OpenAPI spec.
 
+## Flash MCP server
+
+Want a working example instead of wiring the API yourself? The [Flash MCP server](https://www.npmjs.com/package/@definitive-fi/flash-mcp) is an open-source [Model Context Protocol](https://modelcontextprotocol.io) server that implements the full quote → sign → submit flow described below, and it doubles as a reference implementation you can read and copy from.
+
+Add it to Claude Code:
+
+```
+claude mcp add definitive-flash -- npx -y @definitive-fi/flash-mcp
+```
+
+Or add it to Claude Desktop, Cursor, or any MCP client via config:
+
+```json
+{
+  "mcpServers": {
+    "definitive-flash": {
+      "command": "npx",
+      "args": ["-y", "@definitive-fi/flash-mcp"]
+    }
+  }
+}
+```
+
+It exposes tools for the whole trading lifecycle — `flash_setup`, `flash_status`, `flash_quote`, `flash_balances`, `flash_submit_order`, `flash_get_order`, `flash_list_orders`, and `flash_cancel_order` — handling wrapping, approvals, signing, and fill polling across EVM wallets and Solana.
+
+- **npm:** [`@definitive-fi/flash-mcp`](https://www.npmjs.com/package/@definitive-fi/flash-mcp)
+- **Source:** [github.com/DefinitiveCo/flash-mcp](https://github.com/DefinitiveCo/flash-mcp)
+
+Prefer to integrate the REST API directly? Keep reading.
+
 ## Integrate with an LLM
 
 1. **Get an API key** — follow [Become an Integrator](/getting-started).
