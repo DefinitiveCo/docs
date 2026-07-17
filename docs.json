@@ -74,7 +74,7 @@
         "groups": [
           {
             "group": "Agents",
-            "pages": ["for-agents"]
+            "pages": ["for-agents", "flash-mcp"]
           },
           {
             "group": "End-To-End Flows",
