@@ -22,7 +22,7 @@ When you call Flash, include the `flashIntegratorFeeBps` parameter on both `POST
   The 10 bps rate is a **promotional launch rate**, in effect for the first **6 months**. Pricing may change after the promotional period. **Enterprise and high-volume integrators** get different (custom) pricing — [reach out](https://www.definitive.fi/flash-api#contact) to the Definitive team.
 </Note>
 
-Definitive charges a promotional base fee of 10 bps (0.10%) on every trade, across all order types, for the first 6 months. This is separate from your integrator fee: `flashIntegratorFeeBps` stacks on top, so the total a user pays is Definitive's fee plus whatever rate you set. Both are already included in the quote's `estimatedFeeNotional`, so you always quote the true all-in cost regardless of the current rate.
+Definitive charges a base fee on every trade, across all order types. This is separate from your integrator fee: `flashIntegratorFeeBps` stacks on top, so the total a user pays is Definitive's fee plus whatever rate you set. Both are already included in the quote's `estimatedFeeNotional`, so you always quote the true all-in cost regardless of the current rate.
 
 ## Which token your fee is paid in
 
