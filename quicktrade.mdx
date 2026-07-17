@@ -1,6 +1,6 @@
 ---
 title: QuickTrade
-description: QuickTrade is a low-latency execution mode for market orders, built for entering fast-moving and newly launched tokens. It trades fresh quoting for speed by reusing pre-computed quotes and executing aggressively to land the fill.
+description: QuickTrade is a low-latency execution mode for market orders, built for entering fast-moving and newly launched tokens. It trades fresh quoting for speed by reusing pre-computed quotes and prioritizing execution to land the fill.
 ---
 
 QuickTrade is an execution mode for **market orders** that optimizes for speed of execution over price. It is designed for entering fast-moving markets, such as sniping newly launched tokens, where landing the fill quickly matters more than getting the tightest possible price.
@@ -29,7 +29,7 @@ You enable it with a single flag on the order request:
 A normal market order fetches a fresh quote at submission time, then simulates and routes it before execution. QuickTrade removes that round trip:
 
 - **Reusable quotes.** QuickTrade executes against a recently computed quote instead of fetching a new one. Quotes are pre-populated by the quote/preview endpoint (which clients typically call in the background) and reused for a short window, so a submit can skip straight to execution. Under the hood the cached quote's calldata is rewritten to your exact amount.
-- **Aggressive execution.** QuickTrade uses a more aggressive slippage schedule and prioritizes gas so the transaction lands quickly and reliably in competitive blocks, rather than retrying its way in.
+- **Prioritized execution.** QuickTrade tolerates more slippage and prioritizes gas so the transaction lands quickly and reliably in competitive blocks, rather than retrying its way in.
 
 The result is meaningfully lower submit-to-execution latency, at the cost of the price trade-offs described below.
 
@@ -46,7 +46,7 @@ Use a standard market order (omit `quickTrade`) when you want the tightest price
 
 QuickTrade optimizes for landing the fill, so you accept:
 
-- **A wider effective price.** The aggressive slippage schedule tolerates more slippage to avoid slippage-based retries. Your `maxSlippage` and `maxPriceImpact` bounds still apply — if the fill cannot meet them, no funds move.
+- **A wider effective price.** The wider slippage schedule tolerates more slippage to avoid slippage-based retries. Your `maxSlippage` and `maxPriceImpact` bounds still apply — if the fill cannot meet them, no funds move.
 - **Higher gas.** QuickTrade prioritizes gas to land the transaction faster, so gas costs are higher than a standard market order.
 - **A slightly older quote.** Because execution reuses a recent quote rather than pulling a fresh one, the reference price can be marginally staler than a standard order.
 
