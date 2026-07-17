@@ -1,0 +1,73 @@
+---
+title: "Post-Trade Reporting"
+description: "Pull execution reports from the Get Order endpoint to build post-trade dashboards, reconcile fee revenue, and measure execution quality."
+---
+
+After an order executes, [`GET /orders/{orderId}`](/api-reference/flash/get-order) returns the full execution report: fill prices, fees earned, gas costs, venue routing, and onchain confirmation status. Use this data to build post-trade dashboards, reconcile revenue, or feed analytics into your product.
+
+## Order-level summary
+
+The response includes an `order.filled` object with aggregated execution data across all fills:
+
+| Field | Description |
+| --- | --- |
+| `filled.averagePrice` | Average execution price across all fills, in contra asset units |
+| `filled.averageNotionalPrice` | Average execution price in USD |
+| `filled.targetAmount` | Total target asset filled |
+| `filled.contraAmount` | Total contra asset filled |
+
+## Per-fill detail
+
+Each entry in the `fills` array represents a single execution event. For TWAP orders, each time slice produces its own fill; for other order types, there is typically one fill per order.
+
+**Pricing and amounts**
+
+| Field | Description |
+| --- | --- |
+| `fillPrice` | Execution price for this fill |
+| `targetAmount` | Target asset amount in this fill |
+| `contraAmount` | Contra asset amount in this fill |
+| `notional` | USD notional value of the fill |
+
+**Fee breakdown**
+
+| Field | Description |
+| --- | --- |
+| `feeAmount` | Total fee (platform + network + your integrator fee), in the fee token |
+| `feeTicker` | Token the fee is denominated in |
+| `tradeFeeAmount` | Definitive's platform fee, in the fee token (excludes your fee) |
+| `networkFeeAmount` | Gas/network portion, in the fee token |
+| `integratorFeeAmount` | Your integrator fee, in the fee token (`"0"` if none charged) |
+| `feeNotional` | Total fee for this fill in USD |
+| `tradeFeeNotional` | Definitive's platform fee in USD |
+| `networkFeeNotional` | Gas cost in USD |
+| `integratorFeeNotional` | Your integrator fee in USD |
+
+**Execution metadata**
+
+| Field | Description |
+| --- | --- |
+| `venues` | DEXs and liquidity sources the fill routed through |
+| `transactionId` | Onchain transaction hash |
+| `filledAt` | Timestamp of the fill |
+| `status` | Onchain confirmation status |
+
+## Common use cases
+
+**Revenue tracking.** Your integrator fee is what routes to your Definitive vault: `integratorFeeAmount` is the fee in `feeTicker`, and `integratorFeeNotional` is its USD value. Sum `integratorFeeNotional` across fills for your total earnings in USD. `tradeFeeNotional` is Definitive's own platform fee.
+
+**Execution quality reporting.** Compare `filled.averageNotionalPrice` against the quote price to measure realized slippage. Use `venues` to see which liquidity sources contributed to each fill.
+
+**Gas cost accounting.** Use `networkFeeNotional` per fill to track gas costs.
+
+**TWAP fill analysis.** For TWAP orders, each time slice has its own fill entry with an independent `fillPrice`, `filledAt`, and `venues`. Use the full `fills` array to chart execution across the TWAP window and verify price distribution.
+
+<CardGroup cols={2}>
+  <Card title="Get Order endpoint" icon="paper-plane" href="/api-reference/flash/get-order">
+    Full response schema for `GET /orders/{orderId}`.
+  </Card>
+
+  <Card title="Monetize Your Integration" icon="coins" href="/monetizing-your-integration">
+    Set your integrator fee and reconcile earnings from each fill.
+  </Card>
+</CardGroup>
