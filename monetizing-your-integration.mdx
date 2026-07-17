@@ -88,15 +88,16 @@ curl -X POST https://flash.definitive.fi/v1/order \
 
 ## Track your fees
 
-Every fill returned by `GET /orders/{orderId}` includes fee fields so you can reconcile earnings programmatically.  You can also track your fees on the Flash Integrator Dashboard - see details in [Become an Integrator](https://flash.definitive.fi/docs/getting-started).
+Every fill returned by `GET /orders/{orderId}` includes fee fields so you can reconcile earnings programmatically. Sum `integratorFeeNotional` across fills for your total earnings. You can also track your fees on the Flash Integrator Dashboard - see details in [Become an Integrator](https://flash.definitive.fi/docs/getting-started).
 
 | Fill field | What it contains |
 | --- | --- |
-| `feeAmount` | Total fee for this fill (in the fee token) |
-| `feeTicker` | Token the fee was denominated in |
-| `tradeFeeAmount` | Trade-related portion of the fee |
-| `networkFeeAmount` | Network/gas portion of the fee |
-| `feeNotional` | Total fee in notional (USD) terms |
+| `integratorFeeAmount` | **Your integrator fee** for this fill, in the fee token |
+| `feeAmount` | Total fee (platform + network + your integrator fee), in the fee token |
+| `feeNotional` | Total fee in USD |
+| `tradeFeeAmount` | Definitive's platform fee, in the fee token (excludes your fee) |
+| `networkFeeAmount` | Gas/network portion, in the fee token |
+| `feeTicker` | Token the fees were denominated in |
 
 ## Quick reference
 
