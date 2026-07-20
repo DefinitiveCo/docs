@@ -72,7 +72,7 @@ When an order changes, or a new order is placed, you receive an `update` carryin
 | Field | Type | Notes |
 | --- | --- | --- |
 | `orderId` | `string` | Stable key. Merge and dedupe on this. |
-| `orderType` | `market`, `limit`, `twap`, `stop`, `stop-loss`, `take-profit`, `bracket` | |
+| `orderType` | `market`, `limit`, `twap`, `stop`, `stop-loss`, `take-profit` | |
 | `side` | `buy` or `sell` | |
 | `status` | `string` | Active: `ORDER_STATUS_PENDING`, `ORDER_STATUS_ACCEPTED`, `ORDER_STATUS_PARTIALLY_FILLED`. Any other value is terminal (for example `ORDER_STATUS_FILLED`, `ORDER_STATUS_CANCELLED`, `ORDER_STATUS_REJECTED`, `ORDER_STATUS_TERMINATED`); drop it from an open list. See [Order statuses](/order-statuses). |
 | `closeReason` | `string` or `null` | For example `REASON_USER_REQUESTED` or `REASON_FULLY_FILLED`. `null` while active. |
