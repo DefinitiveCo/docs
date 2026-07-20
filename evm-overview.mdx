@@ -87,7 +87,7 @@ You can set slippage tolerance on the quote request via `maxSlippage` (e.g., `"0
 | --- | --- |
 | **Market** | The keeper computes a minimum-output amount from `maxSlippage` and injects it into the swap calldata at submission. If the swap cannot meet it, the transaction reverts and no funds move. |
 | **Limit** | The limit price is the binding constraint. The order only fills at or better than the limit price. |
-| **Stop, Stop Loss, Take Profit, TWAP, Bracket** | These execute at a future time, so the keeper re-evaluates pricing at execution and applies an execution-time slippage schedule bounded by `maxSlippage` / `maxPriceImpact`. |
+| **Stop, Stop Loss, Take Profit, TWAP** | These execute at a future time, so the keeper re-evaluates pricing at execution and applies an execution-time slippage schedule bounded by `maxSlippage` / `maxPriceImpact`. |
 
 `maxSlippage` is a quote-time parameter and is not part of the signed `FlashOrder` struct.
 
