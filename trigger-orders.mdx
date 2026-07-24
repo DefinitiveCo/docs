@@ -3,7 +3,7 @@ title: "Trigger Orders"
 description: "End-to-end stop, stop-loss, and take-profit orders on EVM and Solana with runnable TypeScript."
 ---
 
-Trigger orders fire on a price condition rather than a fixed limit. Each entry in `triggers` carries exactly one of `notionalPrice` (the USD price of the target asset) or `crossPrice` (the pair rate: `contraAsset` units per one `targetAsset` unit), plus a `triggerType`: `lower` fires when the market drops to or below the price, `upper` fires when it rises to or above. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
+Trigger orders fire on a price condition rather than a fixed limit. Each entry in `triggers` carries exactly one of `notionalPrice` (the USD price of the target asset) or `crossPrice` (the pair rate, target / contra), plus a `triggerType`: `lower` fires when the market drops to or below the price, `upper` fires when it rises to or above. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
 
 This page covers three single-trigger types: `stop`, `stop-loss`, and `take-profit`. The signing and submit plumbing is identical to a market order; only the request fields differ, and each type has a fixed `side` and, for two of them, a fixed `triggerType`.
 

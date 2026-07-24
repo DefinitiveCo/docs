@@ -34,7 +34,7 @@ Every price you set on an order — a limit price or a trigger price — is expr
 
 **Notional** is the **USD value of the target asset**. If WETH is trading at \$4,000 per WETH, the notional price is `"4000"`. Set it with `limitNotionalPrice` on a limit, or `notionalPrice` on a trigger.
 
-**Cross** is the **pair rate**: how many `contraAsset` units one `targetAsset` unit is worth. It is the price of the target asset denominated in the contra asset — the same target/contra direction as notional, just quoted in the contra asset instead of dollars, and never inverted. With WETH as the target and USDC as the contra, a cross price of `"4000"` means 4,000 USDC per WETH; with cbBTC as the contra it would be cbBTC per WETH. The frame is the same on `buy` and `sell`. Set it with `limitCrossPrice` on a limit, or `crossPrice` on a trigger.
+**Cross** is the **pair rate**: how many `contraAsset` units one `targetAsset` unit is worth (target / contra). It is the price of the target asset denominated in the contra asset, never inverted. With WETH as the target and USDC as the contra, a cross price of `"4000"` means 4,000 USDC per WETH; with cbBTC as the contra it would be cbBTC per WETH. The frame is the same on `buy` and `sell`. Set it with `limitCrossPrice` on a limit, or `crossPrice` on a trigger.
 
 The two bases are mutually exclusive on the same price — send exactly one. Either way the price is the price of one target-asset unit, never the contra asset's price. Quote responses report each leg's `notional` and the estimated fee in USD regardless of which basis you priced in.
 
@@ -52,17 +52,17 @@ See [QuickTrade](/quicktrade) for how it works, when to use it, the trade-offs, 
 
 ## Limit pricing
 
-`limit` orders require a limit price in exactly one basis: `limitNotionalPrice` (USD price of the target asset) or `limitCrossPrice` (`contraAsset` units per one `targetAsset` unit). Sending both is rejected. Either one prices the traded asset, `targetAsset` — the contra asset is the unit of account, never the thing being priced.
+`limit` orders require a limit price in exactly one basis: `limitNotionalPrice` (USD price of the target asset) or `limitCrossPrice` (pair rate, target / contra). Sending both is rejected. Either one prices the traded asset, `targetAsset` — the contra asset is the unit of account, never the thing being priced.
 
 **Buy limit** executes at or below the limit price. You are saying: buy the target asset only if the price is this good or better.
 
 **Sell limit** executes at or above the limit price. You are saying: sell the target asset only if the price is this good or better.
 
-A limit price is also optional on `twap`, `stop`, `stop-loss`, and `take-profit`, in either basis. On a TWAP each tranche rests at that price for its own time slice, carrying unfilled size into the next slice rather than pausing the schedule (see [how a limit price interacts with the schedule](/twap-order#how-a-limit-price-interacts-with-the-schedule)); on a trigger order it promotes the order to the corresponding limit variant. Only `market` rejects a limit price outright.
+A limit price is also optional on `twap`, `stop`, `stop-loss`, and `take-profit`, in either basis. Only `market` rejects a limit price outright.
 
 ## Trigger orders
 
-`stop`, `stop-loss`, and `take-profit` orders fire on a price condition rather than a fixed limit. Each entry in `triggers` carries exactly one of `notionalPrice` (the USD price of the target asset) or `crossPrice` (the pair rate: `contraAsset` units per one `targetAsset` unit) — sending both, or neither, is rejected — plus a `triggerType`: `lower` fires when the market drops to or below the price, `upper` fires when it rises to or above. Each takes exactly one trigger.
+`stop`, `stop-loss`, and `take-profit` orders fire on a price condition rather than a fixed limit. Each entry in `triggers` carries exactly one of `notionalPrice` (the USD price of the target asset) or `crossPrice` (the pair rate, target / contra) — sending both, or neither, is rejected — plus a `triggerType`: `lower` fires when the market drops to or below the price, `upper` fires when it rises to or above. Each takes exactly one trigger.
 
 ## Order expiry
 
@@ -148,7 +148,7 @@ The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset). The order executes
 
 **Limit buy priced in the pair rate: buy WETH at 1,000 USDC per WETH or better**
 
-The same order as the limit buy above, priced in contra units per target unit instead of USD. Use this basis when the contra asset is not a dollar stablecoin, or when you want the constraint to track the pair rather than the dollar.
+The same order as the limit buy above, priced in the pair rate (target / contra) instead of USD. Use this basis when the contra asset is not a dollar stablecoin, or when you want the constraint to track the pair rather than the dollar.
 
 ```jsonc
 {
@@ -181,8 +181,8 @@ The same order as the limit buy above, priced in contra units per target unit in
 | `flashIntegratorFeeBps` | Optional for integrator fees | Fee in basis points; set the same string value on the quote and order requests |
 | `erc8021AttributionCode` | Optional, order request only | Base builder code appended to the settlement transaction for [ERC-8021 attribution](/monetizing-your-integration#base-builder-code-attribution) (EVM only); send it on the order request, not the quote |
 | `limitNotionalPrice` | Required on limit orders (one basis); optional on TWAP and trigger orders | USD price of the target asset (`targetAsset`), not the contra asset; buy at or below, sell at or above |
-| `limitCrossPrice` | Required on limit orders (one basis); optional on TWAP and trigger orders | Pair rate: `contraAsset` units per one `targetAsset` unit, same frame on buy and sell; mutually exclusive with `limitNotionalPrice` |
-| `triggers` | Stop / stop-loss / take-profit | Each entry takes exactly one of `notionalPrice` (USD price of the target asset) or `crossPrice` (`contraAsset` units per one `targetAsset` unit), plus `triggerType` (`upper` / `lower`) |
+| `limitCrossPrice` | Required on limit orders (one basis); optional on TWAP and trigger orders | Pair rate (target / contra), same frame on buy and sell; mutually exclusive with `limitNotionalPrice` |
+| `triggers` | Stop / stop-loss / take-profit | Each entry takes exactly one of `notionalPrice` (USD price of the target asset) or `crossPrice` (pair rate, target / contra), plus `triggerType` (`upper` / `lower`) |
 | `expireTime` | Optional for limit / trigger orders | Order expiration for good-til-time behavior; omit for good-til-cancelled |
 | `durationSeconds` | TWAP orders | Order duration in seconds; converted to the onchain deadline with a 60s execution buffer. Quote-time only |
 | `startTime` | Optional for TWAP | ISO-8601 scheduled start; `durationSeconds` is measured from it. Send the same value on the quote and the order |

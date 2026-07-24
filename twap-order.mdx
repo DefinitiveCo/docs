@@ -18,15 +18,9 @@ This page shows the full flow end to end (quote, sign, submit) as a runnable scr
 | `twapBucketCount` | Optional | Number of tranches, between 2 and 2560. Echo the same value on submit |
 | `startTime` | Optional | ISO-8601 scheduled start. `durationSeconds` is measured from this time. Echo the same value on submit |
 | `limitNotionalPrice` | Optional (one basis) | USD limit price for the target asset. Tranches execute only at that price or better |
-| `limitCrossPrice` | Optional (one basis) | Pair-rate limit price: `contraAsset` units per one `targetAsset` unit. Mutually exclusive with `limitNotionalPrice` |
+| `limitCrossPrice` | Optional (one basis) | Pair-rate limit price (target / contra). Mutually exclusive with `limitNotionalPrice` |
 
 Omit `startTime` to begin immediately. A limit price is optional on a TWAP — supply at most one of the two bases; see [Pricing basis](/placing-orders#pricing-basis).
-
-### How a limit price interacts with the schedule
-
-Each tranche rests at your limit for the length of its own time slice, and fills as soon as the market reaches that price within the slice. If a slice ends without filling, only that tranche expires — the TWAP itself keeps running, and the unfilled size is carried into the following tranche (up to a cap) so the order can catch up when the price comes back.
-
-The schedule never pauses for price: slices keep advancing on the clock set by `durationSeconds`. If the full duration elapses with size still unfilled, the order ends with status `ORDER_STATUS_CANCELLED` and `closeReason` `REASON_ORDER_EXPIRED`, keeping whatever filled along the way.
 
 TWAP orders do not accept `expireTime` (the duration sets expiry instead) or `triggers`. Progress is surfaced on the order status through `twapBucketCount` and `completedFillCount`.
 

@@ -3,7 +3,7 @@ title: "Limit Order"
 description: "End-to-end limit order on EVM and Solana. Quote, sign, and submit with runnable TypeScript."
 ---
 
-A limit order fills only at your limit price or better. A buy fills at or below the limit; a sell fills at or above it. Price it in either basis: `limitNotionalPrice`, the USD price of the target asset, or `limitCrossPrice`, the pair rate — `contraAsset` units per one `targetAsset` unit. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
+A limit order fills only at your limit price or better. A buy fills at or below the limit; a sell fills at or above it. Price it in either basis: `limitNotionalPrice`, the USD price of the target asset, or `limitCrossPrice`, the pair rate (target / contra). For the concepts behind the parameters, see [Placing Orders](/placing-orders).
 
 This page shows the full flow end to end (quote, sign, submit) as a runnable script for each chain. The EVM example places a buy limit for WETH against USDC on Base; the Solana example does the same for WSOL against USDC. The signing and submit plumbing is identical to a market order; only the request fields differ.
 
@@ -15,7 +15,7 @@ This page shows the full flow end to end (quote, sign, submit) as a runnable scr
 | `side` | Yes | `"buy"` or `"sell"` |
 | `qty` | Yes | Spend amount, as a string. Contra units on a buy, target units on a sell |
 | `limitNotionalPrice` | One of the two | USD price of the target asset. Buy fills at or below, sell fills at or above |
-| `limitCrossPrice` | One of the two | Pair rate: `contraAsset` units per one `targetAsset` unit, same frame on buy and sell. Buy fills at or below, sell fills at or above |
+| `limitCrossPrice` | One of the two | Pair rate (target / contra), same frame on buy and sell. Buy fills at or below, sell fills at or above |
 | `expireTime` | Optional | ISO-8601 expiry for good-til-time behavior. Omit for good-til-cancelled |
 
 A limit order requires exactly one of `limitNotionalPrice` or `limitCrossPrice`; sending both is rejected. Limit orders do not accept `triggers`.
