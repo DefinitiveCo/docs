@@ -58,7 +58,7 @@ See [QuickTrade](/quicktrade) for how it works, when to use it, the trade-offs, 
 
 **Sell limit** executes at or above the limit price. You are saying: sell the target asset only if the price is this good or better.
 
-A limit price is also optional on `twap`, `stop`, `stop-loss`, and `take-profit`, in either basis. On a TWAP it bounds every tranche to that price or better; on a trigger order it promotes the order to the corresponding limit variant. Only `market` rejects a limit price outright.
+A limit price is also optional on `twap`, `stop`, `stop-loss`, and `take-profit`, in either basis. On a TWAP each tranche rests at that price for its own time slice, carrying unfilled size into the next slice rather than pausing the schedule (see [how a limit price interacts with the schedule](/twap-order#how-a-limit-price-interacts-with-the-schedule)); on a trigger order it promotes the order to the corresponding limit variant. Only `market` rejects a limit price outright.
 
 ## Trigger orders
 
