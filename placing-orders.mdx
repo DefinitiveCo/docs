@@ -28,9 +28,15 @@ The meaning of `qty` depends on the `side` of the trade. It is always the amount
 
 Buy `qty` is always denominated in the contra asset. Sell `qty` is always denominated in the target asset.
 
-## Notional pricing
+## Pricing basis
 
-All price fields in Flash are expressed as the **USD notional value of the target asset**. If WETH is trading at \$4,000 per WETH, the notional price is `"4000"`. Quote responses also report each leg's `notional` and the estimated fee in USD.
+Every price you set on an order — a limit price or a trigger price — is expressed in one of two bases. You choose per price.
+
+**Notional** is the **USD value of the target asset**. If WETH is trading at \$4,000 per WETH, the notional price is `"4000"`. Set it with `limitNotionalPrice` on a limit, or `notionalPrice` on a trigger.
+
+**Cross** is the **pair rate**: how many `contraAsset` units one `targetAsset` unit is worth (target / contra). It is the price of the target asset denominated in the contra asset, never inverted. With WETH as the target and USDC as the contra, a cross price of `"4000"` means 4,000 USDC per WETH; with cbBTC as the contra it would be cbBTC per WETH. The frame is the same on `buy` and `sell`. Set it with `limitCrossPrice` on a limit, or `crossPrice` on a trigger.
+
+The two bases are mutually exclusive on the same price — send exactly one. Either way the price is the price of one target-asset unit, never the contra asset's price. Quote responses report each leg's `notional` and the estimated fee in USD regardless of which basis you priced in.
 
 ## Price protection on market orders
 
@@ -46,15 +52,17 @@ See [QuickTrade](/quicktrade) for how it works, when to use it, the trade-offs, 
 
 ## Limit pricing
 
-For limit orders, `limitNotionalPrice` is the USD price of the target asset (the traded asset, `targetAsset`), not the contra asset. It is required for `limit` orders.
+`limit` orders require a limit price in exactly one basis: `limitNotionalPrice` (USD price of the target asset) or `limitCrossPrice` (pair rate, target / contra). Sending both is rejected. Either one prices the traded asset, `targetAsset` — the contra asset is the unit of account, never the thing being priced.
 
-**Buy limit** executes at or below `limitNotionalPrice`. You are saying: buy the target asset only if the price is this good or better.
+**Buy limit** executes at or below the limit price. You are saying: buy the target asset only if the price is this good or better.
 
-**Sell limit** executes at or above `limitNotionalPrice`. You are saying: sell the target asset only if the price is this good or better.
+**Sell limit** executes at or above the limit price. You are saying: sell the target asset only if the price is this good or better.
+
+A limit price is also optional on `twap`, `stop`, `stop-loss`, and `take-profit`, in either basis. Only `market` rejects a limit price outright.
 
 ## Trigger orders
 
-`stop`, `stop-loss`, and `take-profit` orders fire on a price condition rather than a fixed limit. Each entry in `triggers` carries a `notionalPrice`, the USD price of the target asset (the traded asset, `targetAsset`), not the contra asset, and a `triggerType`: `lower` fires when the market drops to or below the price, `upper` fires when it rises to or above. Each takes exactly one trigger.
+`stop`, `stop-loss`, and `take-profit` orders fire on a price condition rather than a fixed limit. Each entry in `triggers` carries exactly one of `notionalPrice` (the USD price of the target asset) or `crossPrice` (the pair rate, target / contra) — sending both, or neither, is rejected — plus a `triggerType`: `lower` fires when the market drops to or below the price, `upper` fires when it rises to or above. Each takes exactly one trigger.
 
 ## Order expiry
 
@@ -63,8 +71,8 @@ For limit orders, `limitNotionalPrice` is the USD price of the target asset (the
 | Order type | How the deadline is set |
 | --- | --- |
 | `market` | A short deadline (roughly 5 minutes from quote time). No expiry parameter. |
-| `twap` | Set `durationSeconds` on the quote request. It is converted into an internal expiration and signed with a 60-second execution buffer. |
-| `limit`, `stop`, `stop-loss`, `take-profit` (including their limit variants when `limitNotionalPrice` is supplied) | Set `expireTime` for good-til-time (GTT) behavior. Omit it for good-til-cancelled (GTC), which uses an effectively non-expiring sentinel (`2^48 - 1`). |
+| `twap` | Set `durationSeconds` on the quote request. It is converted into an internal expiration and signed with a 60-second execution buffer. Add `startTime` to schedule the start; the duration is then measured from `startTime`. `expireTime` is not accepted. |
+| `limit`, `stop`, `stop-loss`, `take-profit` (including their limit variants when a limit price is supplied) | Set `expireTime` for good-til-time (GTT) behavior. Omit it for good-til-cancelled (GTC), which uses an effectively non-expiring sentinel (`2^48 - 1`). |
 
 ## Examples
 
@@ -138,6 +146,23 @@ The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset). The order executes
 }
 ```
 
+**Limit buy priced in the pair rate: buy WETH at 1,000 USDC per WETH or better**
+
+The same order as the limit buy above, priced in the pair rate (target / contra) instead of USD. Use this basis when the contra asset is not a dollar stablecoin, or when you want the constraint to track the pair rather than the dollar.
+
+```jsonc
+{
+  "targetChain": "base",
+  "contraChain": "base",
+  "targetAsset": "0x4200000000000000000000000000000000000006", // WETH
+  "contraAsset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC
+  "side": "buy",
+  "qty": "100",
+  "orderType": "limit",
+  "limitCrossPrice": "1000"
+}
+```
+
 <Tip>
   The snippets above are request bodies. For complete, runnable end-to-end scripts (quote, sign, and submit) on both EVM and Solana, see the End-To-End Flows under AI Integration: [Market](/market-order), [Limit](/limit-order), [TWAP](/twap-order), and [Trigger orders](/trigger-orders).
 </Tip>
@@ -155,10 +180,12 @@ The `qty` is `"0.05"`, meaning sell 0.05 WETH (target asset). The order executes
 | `maxPriceImpact` | Optional | Max price impact as a decimal (default `"0.05"`) |
 | `flashIntegratorFeeBps` | Optional for integrator fees | Fee in basis points; set the same string value on the quote and order requests |
 | `erc8021AttributionCode` | Optional, order request only | Base builder code appended to the settlement transaction for [ERC-8021 attribution](/monetizing-your-integration#base-builder-code-attribution) (EVM only); send it on the order request, not the quote |
-| `limitNotionalPrice` | Limit orders | USD price of the target asset (`targetAsset`), not the contra asset; buy at or below, sell at or above |
-| `triggers` | Stop / stop-loss / take-profit | `notionalPrice` is the USD price of the target asset (`targetAsset`), not the contra asset; plus `triggerType` (`upper` / `lower`) |
+| `limitNotionalPrice` | Required on limit orders (one basis); optional on TWAP and trigger orders | USD price of the target asset (`targetAsset`), not the contra asset; buy at or below, sell at or above |
+| `limitCrossPrice` | Required on limit orders (one basis); optional on TWAP and trigger orders | Pair rate (target / contra), same frame on buy and sell; mutually exclusive with `limitNotionalPrice` |
+| `triggers` | Stop / stop-loss / take-profit | Each entry takes exactly one of `notionalPrice` (USD price of the target asset) or `crossPrice` (pair rate, target / contra), plus `triggerType` (`upper` / `lower`) |
 | `expireTime` | Optional for limit / trigger orders | Order expiration for good-til-time behavior; omit for good-til-cancelled |
-| `durationSeconds` | TWAP orders | Order duration in seconds; converted to the onchain deadline with a 60s execution buffer |
+| `durationSeconds` | TWAP orders | Order duration in seconds; converted to the onchain deadline with a 60s execution buffer. Quote-time only |
+| `startTime` | Optional for TWAP | ISO-8601 scheduled start; `durationSeconds` is measured from it. Send the same value on the quote and the order |
 
 <CardGroup cols={2}>
   <Card title="EVM Overview" icon="cube" href="/evm-overview">

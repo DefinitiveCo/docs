@@ -3,7 +3,7 @@ title: "TWAP Order"
 description: "End-to-end TWAP order on EVM and Solana. Quote, sign, and submit with runnable TypeScript."
 ---
 
-A TWAP (time-weighted average price) order slices one large order into tranches executed over a set duration, reducing price impact. Set the total duration with `durationSeconds`; Flash converts it into the onchain deadline with a 60-second execution buffer. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
+A TWAP (time-weighted average price) order slices one large order into tranches executed over a set duration, reducing price impact. Set the total duration with `durationSeconds`; Flash converts it into the onchain deadline with a 60-second execution buffer. Optionally schedule the start with `startTime`, and bound execution with a limit price. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
 
 This page shows the full flow end to end (quote, sign, submit) as a runnable script for each chain. Both examples sell over one hour: WETH for USDC on Base, and WSOL for USDC on Solana. The signing and submit plumbing is identical to a market order; only the request fields differ.
 
@@ -14,10 +14,15 @@ This page shows the full flow end to end (quote, sign, submit) as a runnable scr
 | `orderType` | Yes | `"twap"` |
 | `side` | Yes | `"buy"` or `"sell"` |
 | `qty` | Yes | Total spend amount, as a string. Contra units on a buy, target units on a sell |
-| `durationSeconds` | Yes | Total duration in seconds. Minimum 300 (5 minutes) |
-| `twapBucketCount` | Optional | Number of tranches, between 2 and 2560 |
+| `durationSeconds` | Yes | Total duration in seconds. Minimum 300 (5 minutes). Quote-time only — not echoed on submit |
+| `twapBucketCount` | Optional | Number of tranches, between 2 and 2560. Echo the same value on submit |
+| `startTime` | Optional | ISO-8601 scheduled start. `durationSeconds` is measured from this time. Echo the same value on submit |
+| `limitNotionalPrice` | Optional (one basis) | USD limit price for the target asset. Tranches execute only at that price or better |
+| `limitCrossPrice` | Optional (one basis) | Pair-rate limit price (target / contra). Mutually exclusive with `limitNotionalPrice` |
 
-TWAP orders do not accept `limitNotionalPrice`, `expireTime`, or `triggers`. Progress is surfaced on the order status through `twapBucketCount` and `completedFillCount`.
+Omit `startTime` to begin immediately. A limit price is optional on a TWAP — supply at most one of the two bases; see [Pricing basis](/placing-orders#pricing-basis).
+
+TWAP orders do not accept `expireTime` (the duration sets expiry instead) or `triggers`. Progress is surfaced on the order status through `twapBucketCount` and `completedFillCount`.
 
 ## End-to-end example
 
@@ -185,7 +190,7 @@ TWAP orders do not accept `limitNotionalPrice`, `expireTime`, or `triggers`. Pro
   </Accordion>
 </AccordionGroup>
 
-To buy instead, set `side` to `"buy"` and denominate `qty` in the contra asset (for example `"1000"` USDC). Add `twapBucketCount` to control how many tranches the order is split into.
+To buy instead, set `side` to `"buy"` and denominate `qty` in the contra asset (for example `"1000"` USDC). Add `twapBucketCount` to control how many tranches the order is split into. To schedule the TWAP and cap its execution price, add `startTime` and a limit price to both the quote and the submit — for example `startTime: "2026-05-12T00:00:00Z"` with `limitNotionalPrice: "4000"` sells only at \$4,000 per WETH or better, starting at that time. `startTime` and `twapBucketCount` must match the values used at quote time; `durationSeconds` is quote-time only.
 
 <Note>
 To track fill progress after submit, poll `GET /orders` or stream live updates over the [Orders WebSocket](/api-reference/flash/websocket). TWAP orders report `completedFillCount` against `twapBucketCount`.

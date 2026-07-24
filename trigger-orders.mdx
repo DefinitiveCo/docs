@@ -3,7 +3,7 @@ title: "Trigger Orders"
 description: "End-to-end stop, stop-loss, and take-profit orders on EVM and Solana with runnable TypeScript."
 ---
 
-Trigger orders fire on a price condition rather than a fixed limit. Each entry in `triggers` carries a `notionalPrice` (the USD price of the target asset) and a `triggerType`: `lower` fires when the market drops to or below the price, `upper` fires when it rises to or above. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
+Trigger orders fire on a price condition rather than a fixed limit. Each entry in `triggers` carries exactly one of `notionalPrice` (the USD price of the target asset) or `crossPrice` (the pair rate, target / contra), plus a `triggerType`: `lower` fires when the market drops to or below the price, `upper` fires when it rises to or above. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
 
 This page covers three single-trigger types: `stop`, `stop-loss`, and `take-profit`. The signing and submit plumbing is identical to a market order; only the request fields differ, and each type has a fixed `side` and, for two of them, a fixed `triggerType`.
 
@@ -13,7 +13,7 @@ This page covers three single-trigger types: `stop`, `stop-loss`, and `take-prof
 | `take-profit` | `sell` | `upper` | Price rises to or above the trigger |
 | `stop` | `buy` | `upper` (typical) | Price rises to or above the trigger (breakout entry) |
 
-Each of these takes exactly one trigger. `qty` follows the usual rule: contra units on a buy, target units on a sell.
+Each of these takes exactly one trigger. `qty` follows the usual rule: contra units on a buy, target units on a sell. The examples below use `notionalPrice`; substitute `crossPrice` to fire on the pair rate instead of the dollar price — `{ "crossPrice": "3000", "triggerType": "lower" }` fires when WETH falls to 3,000 USDC per WETH. Exactly one of the two is required on every trigger.
 
 ## End-to-end example: stop-loss
 
@@ -217,7 +217,7 @@ On a buy, `qty` is denominated in the contra asset (USDC).
 }
 ```
 
-Add `limitNotionalPrice` to any of these for a limit variant (the order becomes a limit order once triggered), and `expireTime` (an ISO-8601 timestamp) for good-til-time behavior. Omit `expireTime` for good-til-cancelled.
+Add a limit price — `limitNotionalPrice` or `limitCrossPrice`, but not both — to any of these for a limit variant (the order becomes a limit order once triggered), and `expireTime` (an ISO-8601 timestamp) for good-til-time behavior. Omit `expireTime` for good-til-cancelled. The limit price and the trigger price choose their basis independently.
 
 <Note>
 To track the order after submit, poll `GET /orders` or stream live updates over the [Orders WebSocket](/api-reference/flash/websocket).
