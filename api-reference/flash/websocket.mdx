@@ -81,8 +81,9 @@ When an order changes, or a new order is placed, you receive an `update` carryin
 | `contraAsset` | `{ id, name, address, ticker, chain }` | The counter asset, spent on buys and received on sells. |
 | `qty` | `string` (decimal) | Amount being spent, in the asset's normalized units. |
 | `filled` | `{ targetAmount, contraAmount }` or `null` | `null` means nothing filled yet. |
-| `limitNotionalPrice` | `string` or `null` | USD limit price for the target asset. |
-| `trigger` | `{ notionalPrice, triggerType }` or `null` | `triggerType` is `upper` or `lower`. |
+| `limitNotionalPrice` | `string` or `null` | USD limit price for the target asset. `null` when the order was priced with `limitCrossPrice`. |
+| `limitCrossPrice` | `string` or `null` | Pair-rate limit price: `contraAsset` units per one `targetAsset` unit. `null` when the order was priced with `limitNotionalPrice`. At most one of the two is non-null. |
+| `trigger` | `{ notionalPrice \| crossPrice, triggerType }` or `null` | Carries whichever basis the trigger was placed in — `notionalPrice` (USD) or `crossPrice` (`contraAsset` units per one `targetAsset` unit), never both. `triggerType` is `upper` or `lower`. |
 | `twapBucketCount` | `number` or `null` | TWAP total buckets. `0` or `null` means auto. |
 | `completedFillCount` | `number` or `null` | TWAP executions completed. `null` on the snapshot, populated on updates. Clamp with `min(completedFillCount, twapBucketCount)`. |
 | `placedAt` | `string` (ISO 8601) | |

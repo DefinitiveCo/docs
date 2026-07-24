@@ -3,7 +3,7 @@ title: "Limit Order"
 description: "End-to-end limit order on EVM and Solana. Quote, sign, and submit with runnable TypeScript."
 ---
 
-A limit order fills only at `limitNotionalPrice` or better, expressed as the USD price of the target asset. A buy fills at or below the limit; a sell fills at or above it. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
+A limit order fills only at your limit price or better. A buy fills at or below the limit; a sell fills at or above it. Price it in either basis: `limitNotionalPrice`, the USD price of the target asset, or `limitCrossPrice`, the pair rate — `contraAsset` units per one `targetAsset` unit. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
 
 This page shows the full flow end to end (quote, sign, submit) as a runnable script for each chain. The EVM example places a buy limit for WETH against USDC on Base; the Solana example does the same for WSOL against USDC. The signing and submit plumbing is identical to a market order; only the request fields differ.
 
@@ -14,10 +14,11 @@ This page shows the full flow end to end (quote, sign, submit) as a runnable scr
 | `orderType` | Yes | `"limit"` |
 | `side` | Yes | `"buy"` or `"sell"` |
 | `qty` | Yes | Spend amount, as a string. Contra units on a buy, target units on a sell |
-| `limitNotionalPrice` | Yes | USD price of the target asset. Buy fills at or below, sell fills at or above |
+| `limitNotionalPrice` | One of the two | USD price of the target asset. Buy fills at or below, sell fills at or above |
+| `limitCrossPrice` | One of the two | Pair rate: `contraAsset` units per one `targetAsset` unit, same frame on buy and sell. Buy fills at or below, sell fills at or above |
 | `expireTime` | Optional | ISO-8601 expiry for good-til-time behavior. Omit for good-til-cancelled |
 
-Limit orders do not accept `triggers`.
+A limit order requires exactly one of `limitNotionalPrice` or `limitCrossPrice`; sending both is rejected. Limit orders do not accept `triggers`.
 
 ## End-to-end example
 
@@ -185,7 +186,7 @@ Limit orders do not accept `triggers`.
   </Accordion>
 </AccordionGroup>
 
-For a sell limit, set `side` to `"sell"`, denominate `qty` in the target asset (for example `"0.05"` WETH), and read `limitNotionalPrice` as the floor: the order fills at or above that price. Add `expireTime` (an ISO-8601 timestamp) to make the order expire; omit it for good-til-cancelled.
+For a sell limit, set `side` to `"sell"`, denominate `qty` in the target asset (for example `"0.05"` WETH), and read the limit price as the floor: the order fills at or above that price. To price against the pair instead of the dollar, swap `limitNotionalPrice` for `limitCrossPrice` — `limitCrossPrice: "1000"` on the EVM example above is 1,000 USDC per WETH. Add `expireTime` (an ISO-8601 timestamp) to make the order expire; omit it for good-til-cancelled.
 
 <Note>
 To track the order after submit, poll `GET /orders` or stream live updates over the [Orders WebSocket](/api-reference/flash/websocket).

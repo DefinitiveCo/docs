@@ -17,7 +17,7 @@ This page shows the full flow end to end (quote, sign, submit) as a runnable scr
 | `maxSlippage` | Optional | Slippage tolerance as a decimal string (default `"0.05"`) |
 | `maxPriceImpact` | Optional | Max price impact as a decimal string (default `"0.05"`) |
 
-Market orders do not accept `limitNotionalPrice`, `expireTime`, or `triggers`. The onchain deadline is set automatically (roughly 5 minutes from quote time).
+Market orders do not accept a limit price (`limitNotionalPrice` or `limitCrossPrice`), `expireTime`, or `triggers`. The onchain deadline is set automatically (roughly 5 minutes from quote time).
 
 ## End-to-end example
 
