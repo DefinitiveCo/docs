@@ -53,7 +53,13 @@
             "pages": [
               "evm-overview",
               "solana-overview",
-              "placing-orders",
+              {
+                "group": "Placing Orders",
+                "pages": [
+                  "placing-orders",
+                  "cancelling-orders"
+                ]
+              },
               "post-trade-reporting",
               "resources"
             ]
