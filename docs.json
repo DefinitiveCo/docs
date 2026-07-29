@@ -105,7 +105,8 @@
               "POST /order",
               "GET /orders",
               "GET /orders/{orderId}",
-              "POST /orders/{orderId}/cancel"
+              "POST /orders/{orderId}/cancel",
+              "GET /search"
             ]
           },
           {
