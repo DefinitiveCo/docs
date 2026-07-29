@@ -54,7 +54,7 @@
               "evm-overview",
               "solana-overview",
               {
-                "group": "Placing Orders",
+                "group": "Orders",
                 "pages": [
                   "placing-orders",
                   "cancelling-orders"
