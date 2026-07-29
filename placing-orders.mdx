@@ -17,6 +17,17 @@ Both legs of the pair must be on the same chain, so `targetChain` and `contraCha
   Native asset behavior is chain-specific. If you spend a native gas asset, request a quote through that chain's native-asset flow, send the returned `wrap` action, then submit with the wrapped-native asset from the quote. See [EVM native assets](/evm-overview#native-eth-and-wrapped-assets) and [Solana native SOL](/solana-overview#native-sol-and-wsol).
 </Note>
 
+## Finding asset addresses
+
+Because both legs are addresses, use `GET /search` to turn a symbol, a name, or a pasted address into the values an order needs. Results are ranked, most relevant first.
+
+```bash cURL
+curl "https://flash.definitive.fi/v1/search?query=weth&chain=base" \
+  -H "x-definitive-api-key: YOUR_API_KEY"
+```
+
+Each result's `address` and `chain` go straight into `targetAsset` / `targetChain` or `contraAsset` / `contraChain`, alongside `decimals`, `price`, `liquidity`, and a `riskFlagged` caution signal. Pass `chain` to pin results to one chain, or omit it to search every supported chain, in which case a query like `usdc` returns the Base, Solana, and Ethereum listings as separate results. See [Search assets](/api-reference/flash/search).
+
 ## How `qty` works
 
 The meaning of `qty` depends on the `side` of the trade. It is always the amount of the asset being spent:

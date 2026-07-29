@@ -57,6 +57,39 @@ dpka_513a2bd7_57a2_46d2_927b_2a3857fe271b
 
 To register your own org as the integrator, follow [Become an Integrator](/getting-started).
 
+## Find an asset
+
+Users name assets by symbol; the API takes addresses. `GET /search` bridges the two. It accepts a symbol, a name, or a pasted address and returns ranked matches, most relevant first.
+
+```bash cURL
+curl "https://flash.definitive.fi/v1/search?query=weth&chain=base&limit=1" \
+  -H "x-definitive-api-key: YOUR_API_KEY"
+```
+
+```json
+{
+  "assets": [
+    {
+      "chain": "base",
+      "address": "0x4200000000000000000000000000000000000006",
+      "symbol": "WETH",
+      "name": "Wrapped Ethereum",
+      "decimals": 18,
+      "price": "1886.63606082",
+      "marketCap": "527528552",
+      "liquidity": "47702954",
+      "volume24h": "104218305",
+      "priceChange24h": "-0.01768310032441419",
+      "holders": 4973090,
+      "imageUrl": "https://definitive-icons-prod.s3.amazonaws.com/id/4f74a37d-dd42-4758-93bc-3d729a8a6a05",
+      "riskFlagged": false
+    }
+  ]
+}
+```
+
+`address` and `chain` feed straight into `targetAsset` / `targetChain` or `contraAsset` / `contraChain` on the quote. `chain` is optional (omit it to search every supported chain), and `limit` defaults to 10 and is capped at 25.
+
 ## Flow
 
 Base URL: `https://flash.definitive.fi/v1`
