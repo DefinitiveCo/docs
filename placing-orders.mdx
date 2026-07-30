@@ -71,6 +71,8 @@ See [QuickTrade](/quicktrade) for how it works, when to use it, the trade-offs, 
 
 A limit price is also optional on `twap`, `stop`, `stop-loss`, and `take-profit`, in either basis. Only `market` rejects a limit price outright.
 
+Once a limit order is resting, its price can be changed without cancelling and re-placing — see [Updating Orders](/updating-orders).
+
 ## Trigger orders
 
 `stop`, `stop-loss`, and `take-profit` orders fire on a price condition rather than a fixed limit. Each entry in `triggers` carries exactly one of `notionalPrice` (the USD price of the target asset) or `crossPrice` (the pair rate, target / contra) — sending both, or neither, is rejected — plus a `triggerType`: `lower` fires when the market drops to or below the price, `upper` fires when it rises to or above. Each takes exactly one trigger.

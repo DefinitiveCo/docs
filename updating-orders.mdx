@@ -1,0 +1,140 @@
+---
+title: "Updating Orders"
+description: "How to change the limit price of a resting Flash limit order by signing an update message with the funder wallet."
+---
+
+Change the limit price of a resting limit order with [`PATCH /orders/{orderId}`](/api-reference/flash/update) — no need to cancel and re-place, and the order keeps its `orderId`. Like cancelling, updating requires a **wallet signature** in addition to your API key: you construct a short plaintext message, sign it with the funder wallet, and send both with the new price. The update signature is offchain and gasless; no transaction is sent, and the original order signature and token approval stay untouched.
+
+## What can be updated
+
+An update reprices the order: send a new **limit price** in either basis, `limitNotionalPrice` (USD price of the target asset) or `limitCrossPrice` (pair rate, target / contra), exactly one per request. You are not restricted to the basis the order was placed with; the order carries whichever basis was set last. See [Pricing basis](/placing-orders#pricing-basis).
+
+To change any other parameter of an order, [cancel](/cancelling-orders) it and place a new one.
+
+## The update message
+
+Construct this exact UTF-8 string — four lines, joined by single newlines:
+
+```text
+Definitive Flash — Update Order
+Order: <orderId>
+Issued At: <RFC3339 UTC timestamp>
+Limit Notional Price: <newPrice>
+```
+
+In code:
+
+```ts
+const updateMessage = [
+  "Definitive Flash — Update Order",
+  `Order: ${orderId}`,
+  `Issued At: ${new Date().toISOString()}`,
+  `Limit Notional Price: ${newPrice}`,
+].join("\n");
+```
+
+The message bytes are identical on EVM and Solana; only the signing primitive differs. The server validates the message byte-for-byte, so:
+
+- The separator in the header is an **em dash** (`—`, U+2014), not a hyphen. Unlike the cancel header, there is no `v1` — don't copy the header from your cancel flow.
+- Line breaks are single `\n` characters. CRLF, blank lines, and a trailing newline are all rejected.
+- `<orderId>` is the order's UUID exactly as returned by [`POST /order`](/api-reference/flash/order).
+- `Issued At` is an RFC3339 UTC timestamp and must be **within 1 minute** of server time — construct and sign the message immediately before sending. The stamp is what stops a captured signature from being replayed later to revert a newer price.
+- The last line is exactly one of `Limit Cross Price: <decimal>` or `Limit Notional Price: <decimal>`, matching the field you send in the request body. The decimal must be **byte-identical** to the request value — if the body says `"4000"`, the message must say `4000`, not `4000.0`. No normalization is applied.
+
+Send the exact string you signed back as `updateMessage` in the request body. The message is plaintext by design: a wallet's message-signing prompt shows the user precisely which order is being repriced, and to what.
+
+## Signing the message
+
+Sign with the **funder wallet** — the same wallet that signed the order. A signature from any other key is rejected.
+
+| Chain | Scheme | `userSignature` format |
+| --- | --- | --- |
+| EVM | EIP-191 `personal_sign` over the message bytes | 65 bytes, `0x`-prefixed hex |
+| Solana | Ed25519 over the message bytes | 64 bytes, base58 |
+
+<Note>
+  On EVM, the signature is verified onchain against the funder address using ERC-1271 with ERC-6492 support. EOAs, deployed smart accounts, and counterfactual (not-yet-deployed) smart accounts all work — sign with whatever `personal_sign` flow the wallet provides.
+</Note>
+
+## Example
+
+Both examples move a resting limit order's price to \$4,000 (notional basis). To price in the pair rate instead, use `Limit Cross Price:` in the message and `limitCrossPrice` in the body.
+
+<AccordionGroup>
+  <Accordion title="EVM" defaultOpen>
+    ```ts
+    import { privateKeyToAccount } from "viem/accounts";
+
+    const BASE_URL = "https://flash.definitive.fi/v1";
+    const API_KEY = "dpka_513a2bd7_57a2_46d2_927b_2a3857fe271b";
+
+    const account = privateKeyToAccount(process.env.EVM_PRIVATE_KEY as `0x${string}`);
+
+    const orderId = "..."; // from POST /order
+    const newPrice = "4000";
+    const updateMessage = [
+      "Definitive Flash — Update Order",
+      `Order: ${orderId}`,
+      `Issued At: ${new Date().toISOString()}`,
+      `Limit Notional Price: ${newPrice}`,
+    ].join("\n");
+    const userSignature = await account.signMessage({ message: updateMessage }); // EIP-191 personal_sign
+
+    const res = await fetch(`${BASE_URL}/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-definitive-api-key": API_KEY },
+      body: JSON.stringify({ limitNotionalPrice: newPrice, updateMessage, userSignature }),
+    }).then((r) => r.json());
+
+    console.log(res); // { ok: true }
+    ```
+  </Accordion>
+  <Accordion title="SVM (Solana)" defaultOpen>
+    ```ts
+    import { Keypair } from "@solana/web3.js";
+    import nacl from "tweetnacl";
+    import bs58 from "bs58";
+
+    const BASE_URL = "https://flash.definitive.fi/v1";
+    const API_KEY = "dpka_513a2bd7_57a2_46d2_927b_2a3857fe271b";
+
+    const funder = Keypair.fromSecretKey(bs58.decode(process.env.SOLANA_SECRET_KEY!));
+
+    const orderId = "..."; // from POST /order
+    const newPrice = "4000";
+    const updateMessage = [
+      "Definitive Flash — Update Order",
+      `Order: ${orderId}`,
+      `Issued At: ${new Date().toISOString()}`,
+      `Limit Notional Price: ${newPrice}`,
+    ].join("\n");
+    const signature = nacl.sign.detached(new TextEncoder().encode(updateMessage), funder.secretKey);
+    const userSignature = bs58.encode(signature); // 64-byte Ed25519 signature
+
+    const res = await fetch(`${BASE_URL}/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-definitive-api-key": API_KEY },
+      body: JSON.stringify({ limitNotionalPrice: newPrice, updateMessage, userSignature }),
+    }).then((r) => r.json());
+
+    console.log(res); // { ok: true }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What an update does
+
+An accepted update is executed as a **cancel-and-replace under the same `orderId`**: the remaining quantity is re-placed at the new price, and the order's identity is stable everywhere — [`GET /orders/{orderId}`](/api-reference/flash/get-order), the [Orders WebSocket](/api-reference/flash/websocket), and any state you key by `orderId`.
+
+**Partial fills are kept.** Fills that already settled onchain are final; only the unfilled remainder rests at the new price.
+
+**The update is visible on the WebSocket.** While the update is in flight, order frames carry `pendingUpdate: true`; once applied, the flag clears and the frames carry the new `limitNotionalPrice` or `limitCrossPrice`. If the flag clears and the price is unchanged, the update was rejected downstream.
+
+## Which orders can be updated
+
+Resting limit orders — `ORDER_STATUS_ACCEPTED` or `ORDER_STATUS_PARTIALLY_FILLED`. See [Order statuses](/order-statuses).
+
+- **One update at a time.** While an update is in flight, another `PATCH` returns `422` (`order already has a pending update`). Wait for the WebSocket frame with the new price, or re-read the order, before sending the next one.
+- **Terminal orders can't be updated.** Orders in `ORDER_STATUS_FILLED`, `ORDER_STATUS_CANCELLED`, `ORDER_STATUS_REJECTED`, or `ORDER_STATUS_TERMINATED` return `422`.
+- **An update can race a fill.** If the order fills before the update lands, the request returns `422` — treat that as the order having executed at the old price, not as a failure to retry.
+- **`404` covers both a missing order and a failed signature.** If you get a `404` for an order you know exists, check the signature and the message bytes.

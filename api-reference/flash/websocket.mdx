@@ -83,6 +83,7 @@ When an order changes, or a new order is placed, you receive an `update` carryin
 | `filled` | `{ targetAmount, contraAmount }` or `null` | `null` means nothing filled yet. |
 | `limitNotionalPrice` | `string` or `null` | USD limit price for the target asset. `null` when the order was priced with `limitCrossPrice`. |
 | `limitCrossPrice` | `string` or `null` | Pair-rate limit price (target / contra). `null` when the order was priced with `limitNotionalPrice`. At most one of the two is non-null. |
+| `pendingUpdate` | `boolean` | `true` while an [order update](/updating-orders) is in flight; cleared on the next frame whether the update is applied or rejected. `false` on the connect-time snapshot. |
 | `trigger` | `{ notionalPrice \| crossPrice, triggerType }` or `null` | Carries whichever basis the trigger was placed in — `notionalPrice` (USD) or `crossPrice` (pair rate, target / contra), never both. `triggerType` is `upper` or `lower`. |
 | `twapBucketCount` | `number` or `null` | TWAP total buckets. `0` or `null` means auto. |
 | `completedFillCount` | `number` or `null` | TWAP executions completed. `null` on the snapshot, populated on updates. Clamp with `min(completedFillCount, twapBucketCount)`. |

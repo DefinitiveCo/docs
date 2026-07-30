@@ -57,6 +57,7 @@
                 "group": "Orders",
                 "pages": [
                   "placing-orders",
+                  "updating-orders",
                   "cancelling-orders"
                 ]
               },
@@ -105,6 +106,7 @@
               "POST /order",
               "GET /orders",
               "GET /orders/{orderId}",
+              "PATCH /orders/{orderId}",
               "POST /orders/{orderId}/cancel",
               "GET /search"
             ]
