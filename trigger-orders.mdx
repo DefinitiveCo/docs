@@ -219,6 +219,8 @@ On a buy, `qty` is denominated in the contra asset (USDC).
 
 Add a limit price — `limitNotionalPrice` or `limitCrossPrice`, but not both — to any of these for a limit variant (the order becomes a limit order once triggered), and `expireTime` (an ISO-8601 timestamp) for good-til-time behavior. Omit `expireTime` for good-til-cancelled. The limit price and the trigger price choose their basis independently.
 
+Once a `stop-limit` (`stop-loss` with a limit price) or `take-profit-limit` (`take-profit` with a limit price) order is live, you can reprice its limit without cancelling — see [Updating Orders](/updating-orders). The update moves the post-trigger execution limit, not the trigger price.
+
 <Note>
 To track the order after submit, poll `GET /orders` or stream live updates over the [Orders WebSocket](/api-reference/flash/websocket).
 </Note>

@@ -1,13 +1,25 @@
 ---
 title: "Updating Orders"
-description: "How to change the limit price of a resting Flash limit order by signing an update message with the funder wallet."
+description: "How to change the limit price of a resting Flash limit, stop-limit, or take-profit-limit order by signing an update message with the funder wallet."
 ---
 
-Change the limit price of a resting limit order with [`PATCH /orders/{orderId}`](/api-reference/flash/update) — no need to cancel and re-place, and the order keeps its `orderId`. Like cancelling, updating requires a **wallet signature** in addition to your API key: you construct a short plaintext message, sign it with the funder wallet, and send both with the new price. The update signature is offchain and gasless; no transaction is sent, and the original order signature and token approval stay untouched.
+Change the limit price of a resting order — a `limit`, or the limit price of a `stop-limit` or `take-profit-limit` — with [`PATCH /orders/{orderId}`](/api-reference/flash/update), no need to cancel and re-place, and the order keeps its `orderId`. Like cancelling, updating requires a **wallet signature** in addition to your API key: you construct a short plaintext message, sign it with the funder wallet, and send both with the new price. The update signature is offchain and gasless; no transaction is sent, and the original order signature and token approval stay untouched.
 
 ## What can be updated
 
 An update reprices the order: send a new **limit price** in either basis, `limitNotionalPrice` (USD price of the target asset) or `limitCrossPrice` (pair rate, target / contra), exactly one per request. You are not restricted to the basis the order was placed with; the order carries whichever basis was set last. See [Pricing basis](/placing-orders#pricing-basis).
+
+Three order types carry a limit price you can update:
+
+| Order type | What the update reprices |
+| --- | --- |
+| `limit` | The resting limit price the order fills at. |
+| `stop-limit` — a `stop-loss` order placed with a limit price | The **post-trigger execution limit**: the price the order fills at *once the trigger has fired*. |
+| `take-profit-limit` — a `take-profit` order placed with a limit price | The **post-trigger execution limit**: the price the order fills at *once the trigger has fired*. |
+
+<Warning>
+  On `stop-limit` and `take-profit-limit` orders, an update moves the **limit price only** — the execution floor or ceiling that applies after the trigger fires. It does **not** move the trigger, so an update never changes the price at which the order arms. The trigger price is fixed for the life of the order; to change it, [cancel](/cancelling-orders) and place a new order.
+</Warning>
 
 To change any other parameter of an order, [cancel](/cancelling-orders) it and place a new one.
 
@@ -132,9 +144,17 @@ An accepted update is executed as a **cancel-and-replace under the same `orderId
 
 ## Which orders can be updated
 
-Resting limit orders — `ORDER_STATUS_ACCEPTED` or `ORDER_STATUS_PARTIALLY_FILLED`. See [Order statuses](/order-statuses).
+An order is updatable while a limit is resting under its `orderId` — status `ORDER_STATUS_ACCEPTED` or `ORDER_STATUS_PARTIALLY_FILLED`. See [Order statuses](/order-statuses).
+
+A `stop-limit` or `take-profit-limit` order can be updated **both before and after its trigger fires**:
+
+- **Before the trigger fires**, the update reprices the limit the order will fill at once it arms. The trigger is untouched.
+- **After the trigger fires**, the order is already an ordinary resting limit order; the update reprices that limit in flight — the resting order is cancelled and re-placed at the new price under the same `orderId`.
+
+The mechanics below apply to every updatable type:
 
 - **One update at a time.** While an update is in flight, another `PATCH` returns `422` (`order already has a pending update`). Wait for the WebSocket frame with the new price, or re-read the order, before sending the next one.
 - **Terminal orders can't be updated.** Orders in `ORDER_STATUS_FILLED`, `ORDER_STATUS_CANCELLED`, `ORDER_STATUS_REJECTED`, or `ORDER_STATUS_TERMINATED` return `422`.
+- **A trigger order that fires on entry has nothing to reprice.** If the market already satisfies the trigger the instant the order is placed, it executes without ever resting; an update for it returns `404`, the same as an `orderId` that never existed.
 - **An update can race a fill.** If the order fills before the update lands, the request returns `422` — treat that as the order having executed at the old price, not as a failure to retry.
 - **`404` covers both a missing order and a failed signature.** If you get a `404` for an order you know exists, check the signature and the message bytes.

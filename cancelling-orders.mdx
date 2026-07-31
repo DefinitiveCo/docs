@@ -3,7 +3,7 @@ title: "Cancelling Orders"
 description: "How to cancel an open Flash order by signing a cancel message with the funder wallet."
 ---
 
-Cancel any open order with [`POST /orders/{orderId}/cancel`](/api-reference/flash/cancel). Like placing an order, cancelling one requires a **wallet signature** in addition to your API key — but where an order signs the payload returned by the quote, a cancel signs a short plaintext message you construct yourself. The cancel signature is offchain and gasless; no transaction is sent. To change a resting limit order's price without cancelling it, see [Updating Orders](/updating-orders).
+Cancel any open order with [`POST /orders/{orderId}/cancel`](/api-reference/flash/cancel). Like placing an order, cancelling one requires a **wallet signature** in addition to your API key — but where an order signs the payload returned by the quote, a cancel signs a short plaintext message you construct yourself. The cancel signature is offchain and gasless; no transaction is sent. To change a resting order's limit price without cancelling it, see [Updating Orders](/updating-orders).
 
 ## The cancel message
 
