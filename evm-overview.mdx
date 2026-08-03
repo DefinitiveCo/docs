@@ -79,6 +79,14 @@ Flash accepts **EIP-1271 smart-wallet signatures** on all EVM chains. This means
 
 Supported wallet types include EOAs, embedded smart wallets (e.g. Privy, Turnkey, Dynamic),institutional-grade custody solutions (e.g. Fireblocks, Fordefi, Utila), Coinbase Smart Wallet (including sub-accounts), and any wallet that implements EIP-1271.
 
+### EIP-7702 delegated EOAs
+
+Flash chooses how to validate an order signature from the `funderAddress`'s onchain code, not from the address type. If the address has **any** code, Flash validates the signature via EIP-1271 (`isValidSignature`) instead of plain ECDSA recovery. An EIP-7702 authorization installs delegated code on an EOA (its `eth_getCode` returns a `0xef0100…` delegation prefix), so once an EOA is 7702-delegated Flash treats it as a smart account and routes to the delegate's `isValidSignature`.
+
+Because of this, a raw EOA `eth_signTypedData_v4` signature — even though it recovers correctly to the account address — is **rejected** for a 7702-delegated funder (`PERMISSION_DENIED: signature verification failed`), since the delegate's `isValidSignature` does not accept a bare ECDSA signature.
+
+To place orders from a 7702-delegated account, produce a signature the delegate's `isValidSignature` accepts by signing through the delegated smart-account's typed-data flow, then submit that as `userSignature`. For example, with an Alchemy Modular Account V2 delegate, build the account with `toModularAccountV2({ mode: "7702" })` and sign `orderTypedData` via its smart-account `signTypedData`. If a wallet cannot produce a signature its delegate will validate, remove the 7702 delegation (or trade from a plain EOA or a dedicated smart wallet) so validation falls back to ECDSA recovery.
+
 ## Slippage and price protection
 
 You can set slippage tolerance on the quote request via `maxSlippage` (e.g., `"0.05"` = 5%, the default). Flash enforces slippage offchain through its execution engine (the keeper), not through the settlement contract. The signed `FlashOrder` payload does not contain a minimum-output amount, so price protection is applied when the swap is built and submitted:

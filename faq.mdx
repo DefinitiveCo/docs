@@ -112,6 +112,12 @@ description: "Frequently asked questions about Flash API. Custody, order types, 
     Yes. Flash supports EIP-1271 signatures, so smart contract wallets that can produce an EIP-1271 signature (for example Safe and account-abstraction wallets) can sign and place orders.
   </Accordion>
 
+  <Accordion title="My order from an EIP-7702 delegated EOA is rejected with a signature verification error — why?">
+    Flash picks the signature check from the funder's onchain code, not the address type. If the `funderAddress` has any code — including an EIP-7702 delegation, whose `eth_getCode` returns a `0xef0100…` prefix — Flash validates the order signature with EIP-1271 (`isValidSignature`) rather than plain ECDSA recovery. A bare EOA `eth_signTypedData_v4` signature that recovers to the account is therefore rejected (`PERMISSION_DENIED: signature verification failed`), because the delegate's `isValidSignature` does not accept it.
+
+    Sign through the delegated smart account's typed-data flow so the signature passes the delegate's `isValidSignature`, then submit that as the `userSignature`. For example, with an Alchemy Modular Account V2 delegate, build the account with `toModularAccountV2({ mode: "7702" })` and sign `orderTypedData` via its smart-account `signTypedData`. Alternatively, remove the 7702 delegation (or trade from a plain EOA or dedicated smart wallet) so validation falls back to ECDSA recovery. See [EIP-7702 delegated EOAs](/evm-overview#eip-7702-delegated-eoas).
+  </Accordion>
+
   <Accordion title="What is the vault address in the EVM FlashOrder EIP-712 payload, and do I need to set or track it?">
     That's the Definitive vault for your integrator account (your fee-settlement vault and the workspace where the swap executes), and there's one vault per chain. The signed order binds execution to it: Flash pulls the spent asset into that vault, runs the swap, keeps your integrator fee there, and sends the output to the destination wallet. The quote response fills the address in and you sign what's returned, so you don't need to set or track it on your side.
   </Accordion>
