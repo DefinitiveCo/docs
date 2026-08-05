@@ -37,7 +37,7 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
 
     Send these instructions from your funder wallet before delegating, signing, and submitting. Your funder wallet pays the account rent (about 0.002 SOL per account, more for Token-2022 mints with extensions) and owns the accounts.
 
-    The instructions are idempotent, so re-sending them is a safe no-op, and `svm.ataSetupIxs` is null once both accounts already exist. When a single order needs several onchain setup actions, run them in this order: create token accounts, wrap native SOL (if the quote spends native SOL), then delegate.
+    The instructions are idempotent, so re-sending them is a safe no-op, and `svm.ataSetupIxs` is null once both accounts already exist. When a single order needs several onchain setup actions, run them in this order: create token accounts, wrap native SOL (if the quote spends native SOL), then delegate. You do not need a separate transaction per step; see [combining setup instructions into one transaction](#combining-setup-instructions-into-one-transaction).
 
     <Note>
       Definitive does not sponsor token account creation. Execute `svm.ataSetupIxs` whenever the quote returns it, they are not created for you.
@@ -46,16 +46,18 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
   <Step title="Handle token delegation (one-time per token)">
     Solana has no ERC-20 approval. Instead, Flash grants itself delegate authority over the spent token's associated token account using an SPL `Approve` instruction scoped to the Flash program. This is the Solana equivalent of an EVM token approval and is required once per token per wallet. After the delegation lands onchain, future orders for the same token skip this step.
 
-    The quote returns the delegation in one of two mutually exclusive forms:
+    The quote returns the delegation in one of two mutually exclusive forms, and `svm.delegateIx` is the default:
 
-    - `svm.delegateIx`: a raw instruction. Wrap it in a transaction, sign it with your funder wallet, and submit it to Solana yourself. You pay the network fee.
-    - `svm.sponsoredDelegateTx`: a base64 `VersionedTransaction`. Sign it with your funder wallet and echo it back as `svmSponsoredDelegateTx` at submit. Definitive covers the network fee and broadcasts it.
+    - `svm.delegateIx`: a raw instruction. Wrap it in a transaction, sign it with your funder wallet, and submit it to Solana yourself, paying the network fee. Build and test against this path, and keep SOL in the funder wallet for it.
+    - `svm.sponsoredDelegateTx`: a base64 `VersionedTransaction`. Sign it with your funder wallet and echo it back as `svmSponsoredDelegateTx` at submit, and Definitive covers the network fee and broadcasts it. Sponsorship is off for new accounts, so do not assume this will appear.
 
-    When `sponsoredDelegateTx` is non-null, `delegateIx` is null, and vice versa. When both are null, the existing delegation already covers this order.
+    At most one of the two is non-null, and when both are null the existing delegation already covers this order.
 
     <Note>
       The delegation and the order signature are separate actions by design. The delegation is an onchain (or sponsored) transaction that grants the Flash program authority to pull the spent token. The order signature is a gasless offchain Ed25519 signature. They cannot be batched into a single user interaction.
     </Note>
+
+    You do not need a separate transaction for the delegation. See [combining setup instructions into one transaction](#combining-setup-instructions-into-one-transaction).
   </Step>
   <Step title="Sign the order payload">
     The user signs `svm.orderMessage` with their wallet's Ed25519 key, producing a 64-byte signature. Encode it as base58 and pass it as `userSignature`. The message is plaintext, so a wallet's message-signing flow surfaces the order's mint and amount to the user.
@@ -80,6 +82,14 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
   </Step>
 </Steps>
 
+## Combining setup instructions into one transaction
+
+`svm.ataSetupIxs` and `svm.delegateIx` are both plain instructions, so you can send them in a single Solana transaction rather than one per step. Keep the documented ordering inside that transaction: token account creation first, then the native SOL wrap instructions if the quote returned them, then delegation. Solana runs instructions in order, and the `Approve` needs the input token account to exist before it runs; on the native SOL path, that account is created and funded by the wrap instructions ahead of it. Broadcast the transaction and wait for confirmation before calling `POST /order`, which rejects the submission when the delegation does not cover the order total, or, on same-chain orders, when the funder's output token account is still missing.
+
+If you run your own sponsor wallet, this is also where you cover the user's costs. Set the sponsor wallet as the transaction fee payer and have it co-sign alongside the funder wallet, which still signs as the token account authority for the `Approve` and as the source of any wrapped SOL. To have the sponsor pay account rent as well, rebuild the create-associated-token-account instructions with the sponsor wallet in the payer slot and the funder wallet as the account owner. The instructions the quote returns put the funder wallet in both slots, in `svm.ataSetupIxs` and in `wrap.svmInstructions`.
+
+Wallet providers that support a separate Solana fee payer document this co-signing pattern in their own gas sponsorship guides.
+
 ## Native SOL and wSOL
 
 Flash settles Solana trades against SPL tokens. The mint `So11111111111111111111111111111111111111112` is the wSOL mint used in Flash requests.
@@ -88,7 +98,7 @@ To spend native SOL, set the spent asset to `So111111111111111111111111111111111
 
 The quote response returns `wrap.svmInstructions`. Send those instructions from the funder wallet before signing and submitting the order. The order itself uses the wSOL mint, plus the `svm.orderMessage`, `svm.nonce`, and `svm.deadline` returned by the quote.
 
-For native-SOL quotes, `wrap.svmInstructions` creates your wSOL (input) account itself, so `svm.ataSetupIxs` only covers the output account. Land the onchain steps in order — `ataSetupIxs`, then the wrap instructions, then delegation — before you sign and submit. (The order signature is offchain; it only needs to be included in the submit.)
+For native-SOL quotes, `wrap.svmInstructions` creates your wSOL (input) account itself, so `svm.ataSetupIxs` only covers the output account. Land the onchain steps in order, `ataSetupIxs`, then the wrap instructions, then delegation, before you sign and submit. (The order signature is offchain; it only needs to be included in the submit.)
 
 If you omit `svmUseNativeSOL`, `So11111111111111111111111111111111111111112` is treated as an ordinary existing wSOL balance. When `So11111111111111111111111111111111111111112` is the buy asset, the output is wSOL. Flash does not currently support native SOL as the output asset.
 
