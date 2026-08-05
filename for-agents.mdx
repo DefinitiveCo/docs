@@ -94,11 +94,11 @@ curl "https://flash.definitive.fi/v1/search?query=weth&chain=base&limit=1" \
 
 Base URL: `https://flash.definitive.fi/v1`
 
-Three steps: quote → sign → submit. The walkthrough below covers both EVM chains and Solana (SVM); for the full per-chain reference see [EVM Overview](/evm-overview) and [Solana Overview](/solana-overview). Set the chain with `targetChain` / `contraChain` (`solana` for SVM). The quote response and submit fields differ by chain: EVM quotes return an `evm` block, Solana quotes return a `svm` block, and the other block is always null.
+Three steps: quote → sign → submit. The walkthrough below covers both EVM chains and Solana (SVM); for the full per-chain reference see [EVM Overview](/evm-overview) and [Solana Overview](/solana-overview). Set the chain with `targetChain` / `contraChain` (`solana` for SVM). The quote response and submit fields follow the chain of the spent asset: EVM sources return an `evm` block, Solana sources return a `svm` block, and the other block is always null.
 
 ### 1. Get a quote
 
-`POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset` (with matching `targetChain` / `contraChain` — same-chain only), `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`. Also pass `funderAddress`, the wallet that will sign and fund the order, so Flash can build the signing payloads. The payload encodes the signer's address, so omitting it returns an empty signing payload (an empty `evm.orderTypedData` on EVM, a null `svm.orderMessage` on Solana). On EVM, asset and wallet addresses are hex (`0x...`); on Solana, they are base58 mint and wallet addresses. If you charge an integrator fee, include `flashIntegratorFeeBps` and send the same value on `POST /order`.
+`POST /quote` — returns pricing for a swap. Pass `targetAsset` / `contraAsset`, their `targetChain` / `contraChain`, `side` (`buy` or `sell`), `qty` as a decimal string in the spent asset's units (`contraAsset` units on a `buy`, `targetAsset` units on a `sell`), and `orderType`. Crosschain market orders use different chain values and require `recipientAddress`; other order types are same-chain. Also pass `funderAddress`, the wallet that will sign and fund the order, so Flash can build the signing payloads. The payload encodes the signer's address, so omitting it returns an empty signing payload (an empty `evm.orderTypedData` on EVM, a null `svm.orderMessage` on Solana). On EVM, asset and wallet addresses are hex (`0x...`); on Solana, they are base58 mint and wallet addresses. If you charge an integrator fee, include `flashIntegratorFeeBps` and send the same value on `POST /order`.
 
 You can spend a native gas asset two ways, and both settle against the wrapped token. **1) Wrap first:** wrap it yourself, then quote and submit against the wrapped token address like any other token. **2) Quote native:** quote with the native asset and Flash returns a `wrap` action to send from `funderAddress` before submitting.
 
@@ -110,6 +110,7 @@ See [EVM native assets](/evm-overview#native-eth-and-wrapped-assets) and [Solana
 Returns:
 
 - `quoteId` — echo back on submit to lock pricing
+- `bridgeQuoteId` — for crosschain quotes, echo back on submit when non-null
 - `from` / `to` — directional legs, each with `asset` (`"target"` or `"contra"`), `amount`, and `notional`
 - `fees.estimatedFeeNotional` — total fee in USD notional
 - `wrap` — pre-trade wrapping action, always present but null unless the quote spends a native gas asset
@@ -171,7 +172,7 @@ Plus chain-specific signing payloads (the other block is always null):
 
 ### 3. Submit the order
 
-`POST /order` — executes the swap. Pass the same trade fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, and `userSignature` from step 2. If you included `flashIntegratorFeeBps` on the quote, include the same string value here.
+`POST /order` — executes the swap. Pass the same trade fields as the quote plus `funderAddress` (wallet funding the swap), `quoteId` from step 1, and `userSignature` from step 2. For crosschain market orders, also pass `recipientAddress` and echo a non-null `bridgeQuoteId`. If you included `flashIntegratorFeeBps` on the quote, include the same string value here.
 
 <AccordionGroup>
   <Accordion title="EVM" defaultOpen>

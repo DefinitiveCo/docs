@@ -5,7 +5,7 @@ description: "End-to-end market order on EVM and Solana. Quote, sign, and submit
 
 A market order executes immediately at the best available price Flash can route. It takes no price field; you bound execution with `maxSlippage` and `maxPriceImpact`. For the concepts behind the parameters, see [Placing Orders](/placing-orders).
 
-This page shows the full flow end to end (quote, sign, submit) as a runnable script for each chain. The EVM example buys WETH with USDC on Base; the Solana example buys WSOL with USDC.
+This page shows the full same-chain flow end to end (quote, sign, submit) as a runnable script for each chain. The EVM example buys WETH with USDC on Base; the Solana example buys WSOL with USDC.
 
 ## Market parameters
 
@@ -192,6 +192,9 @@ To track the order after submit, poll `GET /orders` or stream live updates over 
 </Note>
 
 <CardGroup cols={2}>
+  <Card title="Crosschain Orders" icon="arrows-left-right" href="/crosschain-orders">
+    Move funds across chains in one order.
+  </Card>
   <Card title="Limit Order" icon="chart-line" href="/limit-order">
     Fill only at a set price or better.
   </Card>
