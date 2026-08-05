@@ -11,7 +11,7 @@ Flash API uses a target/contra framework to define every trade. Understanding th
 
 **Contra asset** is the pricing and payment asset, set by `contraAsset` (plus `contraChain`). In a WETH/USDC market, USDC is the contra asset. It is the asset you spend when buying and the asset you receive when selling.
 
-Both legs of the pair must be on the same chain, so `targetChain` and `contraChain` are the same value. Assets are always referenced by address, not symbol.
+For same-chain orders, `targetChain` and `contraChain` are the same value. Crosschain market orders use different values for the two chains. Assets are always referenced by address, not symbol.
 
 <Note>
   Native asset behavior is chain-specific. If you spend a native gas asset, request a quote through that chain's native-asset flow, send the returned `wrap` action, then submit with the wrapped-native asset from the quote. See [EVM native assets](/evm-overview#native-eth-and-wrapped-assets) and [Solana native SOL](/solana-overview#native-sol-and-wsol).
@@ -54,6 +54,14 @@ The two bases are mutually exclusive on the same price — send exactly one. Eit
 Market orders do not take a price field. Instead, you bound execution with `maxSlippage` and `maxPriceImpact`.
 
 Flash enforces slippage offchain through its execution engine. If the swap cannot meet your `maxSlippage`, no funds are moved.
+
+## Crosschain market orders
+
+Crosschain market orders are live. Set `targetChain` and `contraChain` to different supported chains and include `recipientAddress`, the address that receives funds on the destination chain, in both the quote and order requests.
+
+On a buy, funds move from `contraChain` to `targetChain`. On a sell, they move from `targetChain` to `contraChain`. The quote returns signing and funding actions for that source chain. If it returns a non-null `bridgeQuoteId`, pass the value back when you submit the order.
+
+Crosschain execution supports `market` orders only. QuickTrade is not supported. See [Crosschain Orders](/crosschain-orders) for the request flow and example.
 
 ## QuickTrade market orders
 
@@ -191,6 +199,7 @@ The same order as the limit buy above, priced in the pair rate (target / contra)
 | `quickTrade` | Market orders only | Low-latency execution mode |
 | `maxSlippage` | Optional | Slippage tolerance as a decimal (default `"0.05"`) |
 | `maxPriceImpact` | Optional | Max price impact as a decimal (default `"0.05"`) |
+| `recipientAddress` | Crosschain market orders | Address that receives funds on the destination chain; send it on both quote and order requests |
 | `flashIntegratorFeeBps` | Optional for integrator fees | Fee in basis points; set the same string value on the quote and order requests |
 | `erc8021AttributionCode` | Optional, order request only | Base builder code appended to the settlement transaction for [ERC-8021 attribution](/monetizing-your-integration#base-builder-code-attribution) (EVM only); send it on the order request, not the quote |
 | `limitNotionalPrice` | Required on limit orders (one basis); optional on TWAP and trigger orders | USD price of the target asset (`targetAsset`), not the contra asset; buy at or below, sell at or above |

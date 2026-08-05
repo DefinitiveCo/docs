@@ -15,11 +15,12 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
 
 <Steps>
   <Step title="Get a quote">
-    Call `POST /quote` with the asset pair (`targetAsset` / `contraAsset` as base58 mint addresses, with `targetChain` and `contraChain` both set to `solana`, same-chain only), `side` (`buy` or `sell`), `qty` (a decimal string in the spent asset's units: `contraAsset` on a buy, `targetAsset` on a sell), and `orderType`. Pass `funderAddress` (your base58 wallet address) so Flash can build the signing payloads. Flash's smart order router evaluates routes across Solana liquidity sources and returns the best pricing.
+    Call `POST /quote` with the asset pair (`targetAsset` / `contraAsset` and their `targetChain` / `contraChain`), `side` (`buy` or `sell`), `qty` (a decimal string in the spent asset's units: `contraAsset` on a buy, `targetAsset` on a sell), and `orderType`. For a same-chain Solana order, both assets are base58 mint addresses and both chains are `solana`. Crosschain orders use different chain values and require `recipientAddress`; see [Crosschain Orders](/crosschain-orders). Pass `funderAddress` (your base58 wallet address) so Flash can build the signing payloads. Flash's smart order router evaluates routes across Solana liquidity sources and returns the best pricing.
 
     The response includes:
 
     - `quoteId`: reference ID to lock this pricing on submit
+    - `bridgeQuoteId` _(crosschain, conditional)_: bridge quote to echo back on submit when non-null
     - `from` / `to`: the spent and received legs, each with `asset` (`target` or `contra`), `amount`, and `notional`
     - `fees.estimatedFeeNotional`: total fee (gas, trading, integrator) in USD notional
     - `svm.orderMessage`: the UTF-8 message the user must Ed25519-sign
@@ -73,7 +74,7 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
     The signed message commits to the order details (input mint, total, nonce, deadline) and to the Flash program and your Definitive trading group, so it cannot be replayed against another order or program.
   </Step>
   <Step title="Submit the order">
-    Call `POST /order` with the original trade parameters plus `funderAddress`, `quoteId`, `userSignature`, `svmNonce`, and `svmDeadline` (echoed back unchanged from the quote). If the quote returned `svm.sponsoredDelegateTx`, also sign it and include it as `svmSponsoredDelegateTx`. The EVM-only fields (`evmOrderTypedData`, `evmPermitTypedData`, `evmPermitSignature`) must not be present on Solana submissions.
+    Call `POST /order` with the original trade parameters plus `funderAddress`, `quoteId`, `userSignature`, `svmNonce`, and `svmDeadline` (echoed back unchanged from the quote). For a crosschain market order, also send `recipientAddress` and echo a non-null `bridgeQuoteId`. If the quote returned `svm.sponsoredDelegateTx`, also sign it and include it as `svmSponsoredDelegateTx`. The EVM-only fields (`evmOrderTypedData`, `evmPermitTypedData`, `evmPermitSignature`) must not be present on Solana submissions.
 
     Flash handles priority fees, MEV protection, simulation, and onchain landing. The response returns an `orderId` for tracking.
   </Step>

@@ -1,0 +1,66 @@
+---
+title: "Crosschain Orders"
+description: "Quote, sign, and submit a crosschain order with Flash API."
+---
+
+Crosschain orders are live. Set `targetChain` and `contraChain` to different supported chains. Crosschain execution supports `market` orders only and does not support QuickTrade.
+
+## How direction works
+
+The source chain holds the asset you spend. On a buy, funds move from `contraChain` to `targetChain`. On a sell, they move from `targetChain` to `contraChain`.
+
+Send `recipientAddress`, the address that receives funds on the destination chain, on both the quote and order requests. The quote returns approval or delegation and signing actions for the source chain. If it returns a non-null `bridgeQuoteId`, pass that value back when you submit the order.
+
+## Example
+
+This example buys WETH on Base with 100 USDC from Arbitrum:
+
+```ts
+const order = {
+  targetChain: "base",
+  contraChain: "arbitrum",
+  targetAsset: "0x4200000000000000000000000000000000000006", // WETH on Base
+  contraAsset: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC on Arbitrum
+  side: "buy",
+  qty: "100",
+  orderType: "market",
+  maxSlippage: "0.05",
+  recipientAddress: account.address,
+};
+
+const quote = await post("/quote", { ...order, funderAddress: account.address });
+
+// Complete the approval and signing actions returned for the source chain.
+const submitBody = {
+  ...order,
+  funderAddress: account.address,
+  quoteId: quote.quoteId,
+  ...(quote.bridgeQuoteId ? { bridgeQuoteId: quote.bridgeQuoteId } : {}),
+  userSignature,
+  evmOrderTypedData: quote.evm.orderTypedData,
+  ...permitFields,
+};
+
+const { orderId } = await post("/order", submitBody);
+```
+
+Connect the wallet and public client to Arbitrum because USDC is the spent asset. For an EVM-to-Solana or Solana-to-EVM order, `recipientAddress` must use the destination chain's address format. Follow the [EVM](/evm-overview) or [Solana](/solana-overview) flow for the approval, delegation, and signing fields returned by the quote.
+
+## Questions and answers
+
+### What happens if the order refunds?
+
+Funds are refunded to the original funder.
+
+### Why can't I cancel my order?
+
+After a crosschain transaction is sent onchain, Flash must wait for the crosschain order response before allowing cancellation because the funds are still in flight.
+
+<CardGroup cols={2}>
+  <Card title="EVM Overview" icon="cube" href="/evm-overview">
+    Approval and EIP-712 signing on an EVM source chain.
+  </Card>
+  <Card title="Solana Overview" icon="circle-nodes" href="/solana-overview">
+    Delegation and Ed25519 signing on a Solana source chain.
+  </Card>
+</CardGroup>
