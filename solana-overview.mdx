@@ -46,16 +46,12 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
   <Step title="Handle token delegation (one-time per token)">
     Solana has no ERC-20 approval. Instead, Flash grants itself delegate authority over the spent token's associated token account using an SPL `Approve` instruction scoped to the Flash program. This is the Solana equivalent of an EVM token approval and is required once per token per wallet. After the delegation lands onchain, future orders for the same token skip this step.
 
-    The quote returns the delegation in one of two mutually exclusive forms:
+    The quote returns the delegation in one of two mutually exclusive forms, and `svm.delegateIx` is the default:
 
-    - `svm.delegateIx`: a raw instruction. Wrap it in a transaction, sign it with your funder wallet, and submit it to Solana yourself. You pay the network fee.
-    - `svm.sponsoredDelegateTx`: a base64 `VersionedTransaction`. Sign it with your funder wallet and echo it back as `svmSponsoredDelegateTx` at submit. Definitive covers the network fee and broadcasts it.
+    - `svm.delegateIx`: a raw instruction. Wrap it in a transaction, sign it with your funder wallet, and submit it to Solana yourself, paying the network fee. Build and test against this path, and keep SOL in the funder wallet for it.
+    - `svm.sponsoredDelegateTx`: a base64 `VersionedTransaction`. Sign it with your funder wallet and echo it back as `svmSponsoredDelegateTx` at submit, and Definitive covers the network fee and broadcasts it. Sponsorship is off for new accounts, so do not assume this will appear.
 
-    When `sponsoredDelegateTx` is non-null, `delegateIx` is null, and vice versa. When both are null, the existing delegation already covers this order.
-
-    <Note>
-      **Assume you pay the fee.** `svm.delegateIx` is the default path, and sponsorship is off for new accounts. Build and test against the `delegateIx` path, keep SOL in the funder wallet for it, and do not assume `sponsoredDelegateTx` will always appear.
-    </Note>
+    At most one of the two is non-null, and when both are null the existing delegation already covers this order.
 
     <Note>
       The delegation and the order signature are separate actions by design. The delegation is an onchain (or sponsored) transaction that grants the Flash program authority to pull the spent token. The order signature is a gasless offchain Ed25519 signature. They cannot be batched into a single user interaction.
@@ -88,7 +84,7 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
 
 ## Combining setup instructions into one transaction
 
-`svm.ataSetupIxs` and `svm.delegateIx` are both plain instructions, so you can send them in a single Solana transaction rather than one per step. Keep the documented ordering inside that transaction: token account creation first, then the native SOL wrap instructions if the quote returned them, then delegation. The `Approve` acts on the input token account the earlier instructions create, and Solana runs instructions in order, so a single transaction is enough. Broadcast it and wait for confirmation before calling `POST /order`, which rejects the submission if the funder's output token account is still missing or the delegation does not cover the order total.
+`svm.ataSetupIxs` and `svm.delegateIx` are both plain instructions, so you can send them in a single Solana transaction rather than one per step. Keep the documented ordering inside that transaction: token account creation first, then the native SOL wrap instructions if the quote returned them, then delegation. Solana runs instructions in order, and the `Approve` needs the input token account to exist before it runs; on the native SOL path, that account is created and funded by the wrap instructions ahead of it. Broadcast the transaction and wait for confirmation before calling `POST /order`, which rejects the submission when the delegation does not cover the order total, or, on same-chain orders, when the funder's output token account is still missing.
 
 If you run your own sponsor wallet, this is also where you cover the user's costs. Set the sponsor wallet as the transaction fee payer and have it co-sign alongside the funder wallet, which still signs as the token account authority for the `Approve` and as the source of any wrapped SOL. To have the sponsor pay account rent as well, rebuild the create-associated-token-account instructions with the sponsor wallet in the payer slot and the funder wallet as the account owner. The instructions the quote returns put the funder wallet in both slots, in `svm.ataSetupIxs` and in `wrap.svmInstructions`.
 
