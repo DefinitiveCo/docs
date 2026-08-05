@@ -57,6 +57,7 @@
                 "group": "Orders",
                 "pages": [
                   "placing-orders",
+                  "crosschain-orders",
                   "updating-orders",
                   "cancelling-orders"
                 ]
