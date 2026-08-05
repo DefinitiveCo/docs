@@ -54,7 +54,7 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
     When `sponsoredDelegateTx` is non-null, `delegateIx` is null, and vice versa. When both are null, the existing delegation already covers this order.
 
     <Note>
-      **Assume you pay the fee.** `svm.delegateIx` is the default path for essentially every account. New accounts are created with sponsorship off. Build and test against the `delegateIx` path, keep SOL in the funder wallet for it, and do not design a flow that depends on `sponsoredDelegateTx` appearing. Only send `svmSponsoredDelegateTx` when that same quote returned `svm.sponsoredDelegateTx`; sending it otherwise is rejected with `403 PERMISSION_DENIED`.
+      **Assume you pay the fee.** `svm.delegateIx` is the default path, and sponsorship is off for new accounts. Build and test against the `delegateIx` path, keep SOL in the funder wallet for it, and do not assume `sponsoredDelegateTx` will always appear.
     </Note>
 
     <Note>
@@ -91,10 +91,6 @@ Every Solana order follows four steps: quote, delegate, sign, submit. Before you
 `svm.ataSetupIxs` and `svm.delegateIx` are both plain instructions, so you can send them in a single Solana transaction rather than one per step. Keep the documented ordering inside that transaction: token account creation first, then the native SOL wrap instructions if the quote returned them, then delegation. The `Approve` acts on the input token account the earlier instructions create, and Solana runs instructions in order, so a single transaction is enough. Broadcast it and wait for confirmation before calling `POST /order`, which rejects the submission if the funder's output token account is still missing or the delegation does not cover the order total.
 
 If you run your own sponsor wallet, this is also where you cover the user's costs. Set the sponsor wallet as the transaction fee payer and have it co-sign alongside the funder wallet, which still signs as the token account authority for the `Approve` and as the source of any wrapped SOL. To have the sponsor pay account rent as well, rebuild the create-associated-token-account instructions with the sponsor wallet in the payer slot and the funder wallet as the account owner. The instructions the quote returns put the funder wallet in both slots, in `svm.ataSetupIxs` and in `wrap.svmInstructions`.
-
-<Note>
-  This is unrelated to `svm.sponsoredDelegateTx`, which is Definitive paying the delegation fee. Here you are paying, so it applies whether or not sponsorship is enabled for your account.
-</Note>
 
 Wallet providers that support a separate Solana fee payer document this co-signing pattern in their own gas sponsorship guides.
 
