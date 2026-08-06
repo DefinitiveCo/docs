@@ -114,7 +114,11 @@
           },
           {
             "group": "Flash WebSocket",
-            "pages": ["api-reference/flash/websocket"]
+            "pages": [
+              "api-reference/flash/websocket-connection",
+              "api-reference/flash/websocket",
+              "api-reference/flash/websocket-quotes"
+            ]
           }
         ]
       },

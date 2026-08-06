@@ -1,0 +1,96 @@
+---
+title: "Connection"
+description: "One WebSocket connection for everything Flash streams: how to connect, authenticate, multiplex channels, detect a dead connection with heartbeats, and handle connection-level errors."
+---
+
+Flash streams over a single WebSocket endpoint. Open one connection, then subscribe to the channels you need; they multiplex over the same socket.
+
+**Endpoint:** `wss://flash.definitive.fi/v1/ws`
+
+## Channels
+
+| Channel | What it delivers | Docs |
+| --- | --- | --- |
+| `orders` | A funder's open orders: a `snapshot` on subscribe, then an `update` when an order changes or a new one is placed | [Orders](/api-reference/flash/websocket) |
+| `quotes` | Live quotes for one market-order request: a `quote` frame on every revision, until you submit or the session expires | [Quotes](/api-reference/flash/websocket-quotes) |
+| `heartbeats` | A keep-alive frame once per second | [Below](#heartbeats) |
+
+## Authenticating
+
+There is no connect-time handshake. Authenticate in-band by including your Flash API key as `apiKey` in every `subscribe` message. Get a key from [Become an Integrator](/getting-started).
+
+A connection is pinned to one portfolio on first successful auth, and to one API key once a channel is active. A `subscribe` with a different key on the same socket is rejected with `UNAUTHORIZED` and the connection is closed.
+
+## Subscribing
+
+Send a `subscribe` message for each channel as soon as the connection opens. Channel-specific fields are documented on each channel's page.
+
+```json
+{ "channel": "heartbeats", "type": "subscribe", "apiKey": "dpka_…" }
+```
+
+Every accepted `subscribe` and `unsubscribe` is confirmed with an `ack` listing the connection's active channels:
+
+```json
+{ "channel": "subscriptions", "type": "ack", "subscriptions": ["orders", "heartbeats"] }
+```
+
+Stop a channel with an `unsubscribe` message on that channel. The server re-acks your remaining channels.
+
+## Connection limits
+
+The per-key connection limit is at least 50, pooled across everything using that key. If you need it raised, reach out. Exceeding it is rejected with `CONNECTION_LIMIT` and the connection is closed; a backed-off reconnect recovers as slots free.
+
+Channel-specific limits, like the quote subscription cap, are documented on the channel's page.
+
+## Heartbeats
+
+Subscribe to `heartbeats` on every connection to receive a keep-alive frame once per second:
+
+```json
+{ "channel": "heartbeats", "type": "subscribe", "apiKey": "dpka_…" }
+```
+
+Each frame carries an incrementing `counter` and a timestamp:
+
+```json
+{ "channel": "heartbeats", "type": "heartbeat", "counter": 1, "timestamp": "2026-01-01T00:00:00.000Z" }
+```
+
+Heartbeat frames need no action. They give a quiet connection two things: liveness detection (a gap in them means the connection is unhealthy, so reconnect rather than waiting) and steady traffic through any intermediary that closes idle connections on its own timeout.
+
+## Reconnecting
+
+- On disconnect, reconnect with capped backoff and jitter, then re-subscribe to your channels. Nothing survives a disconnect: orders subscriptions return a fresh snapshot, and quote sessions cannot be resumed.
+- On `UNAUTHORIZED`, stop reconnecting and check your API key; reconnecting with the same key will not authenticate.
+- Other closes, including `CONNECTION_LIMIT`, are safe to retry with backoff.
+- If a stream stays unavailable, fall back to polling its REST counterpart.
+
+## Errors
+
+Errors arrive as a frame you can act on:
+
+```json
+{ "type": "error", "code": "UNAUTHORIZED", "message": "apiKey does not match this connection" }
+```
+
+These codes can occur on any channel:
+
+| Code | What it means | What to do |
+| --- | --- | --- |
+| `UNAUTHORIZED` | The `apiKey` is missing, invalid, or does not match this connection | Check your key. Do not reconnect. |
+| `CONNECTION_LIMIT` | Too many open connections for this key | Reduce concurrency for the key. A backed-off reconnect recovers as slots free. |
+| `BAD_JSON` | The message was not valid JSON | Fix the message. |
+| `UNKNOWN_CHANNEL`, `UNKNOWN_TYPE` | The `channel` or `type` is not recognized | Fix the message. |
+| `INTERNAL_ERROR` | The server hit a temporary issue | Retry. |
+
+Channel-specific codes are documented on each channel's page.
+
+<CardGroup cols={2}>
+  <Card title="Orders channel" icon="bolt" href="/api-reference/flash/websocket">
+    Stream a funder's open orders in real time.
+  </Card>
+  <Card title="Quotes channel" icon="chart-line" href="/api-reference/flash/websocket-quotes">
+    Stream live quotes for a market-order request.
+  </Card>
+</CardGroup>

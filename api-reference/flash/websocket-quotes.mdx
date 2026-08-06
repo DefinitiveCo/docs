@@ -1,0 +1,218 @@
+---
+title: "Quotes"
+description: "Stream live market-order quotes: subscribe once with a quote request, then receive a revised quote every time pricing moves, until you submit or the session expires."
+---
+
+The Quotes WebSocket streams revised quotes for a single market-order request. Subscribe with the same body you would send to [`POST /quote`](/api-reference/flash/quote), then receive a `quote` frame every time pricing revises it, until you submit an order or the session ends. Use it instead of re-polling [`POST /quote`](/api-reference/flash/quote) when you need a quote that stays fresh, for example while a user reviews a trade.
+
+**Endpoint:** `wss://flash.definitive.fi/v1/ws`
+
+Each `quote` payload is the same shape as the [`POST /quote`](/api-reference/flash/quote) response, so an existing quote-handling path works unchanged. Every revision is a complete replacement, with its own `quoteId` and signing payloads: sign and submit the newest one.
+
+Connection handling (authentication, multiplexing, heartbeats, reconnecting, connection limits, and connection-level errors) is covered in [Connection](/api-reference/flash/websocket-connection). This page documents the `quotes` channel.
+
+## Why subscribe instead of polling
+
+- **Faster first quote.** A subscription streams the first quote that passes our pricing checks instead of waiting for multiple routes to compare, so it typically arrives sooner than a `POST /quote` response — and it is immediately signable.
+- **Better quotes follow.** As deeper routing completes, better-priced revisions arrive on the same subscription. You get the fast quote and the well-priced quote, in that order, without choosing between them.
+- **Stays executable while the user decides.** Each revision carries fresh signing payloads, so the quote on screen when the user confirms is one they can actually submit — no re-polling loop needed.
+
+## Working with the quotes channel
+
+- You choose the `subscriptionId`. It labels every frame for that subscription and must be unique among your live subscriptions on that connection.
+- One connection can hold many quote subscriptions. Each one is an independent quote session, so run one per quote request you are showing.
+- Subscribe to [`heartbeats`](/api-reference/flash/websocket-connection#heartbeats) so you can tell a healthy-but-quiet connection from a dead one.
+- A session lives about 120 seconds. Re-subscribe with a new `subscriptionId` to continue quoting after it expires.
+- Sessions do not survive a disconnect, and a resumed quote is not the same quote. After a reconnect, re-subscribe for a fresh session.
+- If the stream is unavailable, fall back to polling [`POST /quote`](/api-reference/flash/quote).
+
+## What can be streamed
+
+| Constraint | Detail |
+| --- | --- |
+| Order type | `market` only. Any other `orderType` is rejected with `INVALID_REQUEST`. |
+| Chains | Same-chain only. `targetChain` and `contraChain` must match; crosschain quotes are rejected with `INVALID_REQUEST`. |
+
+Concurrent quote subscriptions are capped per API key. Hitting the cap is not fatal: the subscription is refused with `SUBSCRIPTION_LIMIT`, and the socket and its other subscriptions keep running.
+
+## Quotes channel
+
+### Subscribe
+
+`request` is a [`POST /quote`](/api-reference/flash/quote) body, verbatim:
+
+```json
+{
+  "channel": "quotes",
+  "type": "subscribe",
+  "subscriptionId": "quote-1",
+  "apiKey": "dpka_…",
+  "request": {
+    "targetChain": "base",
+    "contraChain": "base",
+    "targetAsset": "0x4200000000000000000000000000000000000006",
+    "contraAsset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "side": "buy",
+    "qty": "100",
+    "orderType": "market",
+    "maxSlippage": "0.05",
+    "funderAddress": "0x…"
+  }
+}
+```
+
+The server confirms with an `ack` listing your active channels:
+
+```json
+{ "channel": "subscriptions", "type": "ack", "subscriptions": ["quotes"] }
+```
+
+The `ack` covers the connection's channels, not the individual subscription. Treat the `ack` (and the absence of an `error` frame carrying your `subscriptionId`) as admission, and the first `quote` frame as the stream being live.
+
+### Quote
+
+Each revision arrives as a `quote` frame:
+
+```json
+{ "channel": "quotes", "type": "quote", "subscriptionId": "quote-1", "quote": { /* POST /quote response */ } }
+```
+
+- Revisions arrive in order, and each one fully supersedes the last. Keep only the newest.
+- Frames carry no revision number and no session deadline. `quote_expired` is the authoritative end signal, so do not infer expiry from timing.
+- The first frame is the initial quote. There is no separate snapshot frame.
+
+### Quote expired
+
+The session always ends with a `quote_expired` frame:
+
+```json
+{ "channel": "quotes", "type": "quote_expired", "subscriptionId": "quote-1", "reason": "consumed", "orderId": "…" }
+```
+
+| `reason` | What happened | What to do |
+| --- | --- | --- |
+| `consumed` | An order was submitted against this session. The frame carries the resulting `orderId`. | Track the order through [`GET /orders/{orderId}`](/api-reference/flash/get-order) or the [orders stream](/api-reference/flash/websocket). |
+| `ttl` | The session reached its lifetime, about 120 seconds. | Re-subscribe with a new `subscriptionId` if you still need a quote. |
+| `unsubscribed` | You sent an `unsubscribe` for this `subscriptionId`. | Nothing. |
+| `error` | The session failed. An `error` frame carrying the same `subscriptionId` arrives first with the code. | See [Errors](#errors). |
+
+Once you receive `quote_expired`, the `subscriptionId` is free to reuse and the quotes in that session can no longer be submitted.
+
+## Submitting an order
+
+Submitting is unchanged from the REST flow: sign the newest `quote` payload and send it to [`POST /order`](/api-reference/flash/order) with that revision's `quoteId`. See [Market Order](/market-order) for the full signing flow on EVM and Solana.
+
+Submitting consumes the session. The stream closes it and sends `quote_expired` with `reason: "consumed"` and the new `orderId`, so you do not need to unsubscribe afterwards.
+
+<Tip>
+Sign the revision you are about to submit, not an earlier one. Each revision carries its own `quoteId` and signing payloads, and a stale signature does not match the quote you are submitting.
+</Tip>
+
+## Unsubscribing
+
+Stop a single quote session with an `unsubscribe` message carrying its `subscriptionId`:
+
+```json
+{ "channel": "quotes", "type": "unsubscribe", "subscriptionId": "quote-1" }
+```
+
+The server sends `quote_expired` with `reason: "unsubscribed"`, then re-acks your remaining channels. Closing the socket ends every quote session on it.
+
+<Note>
+Unsubscribe as soon as a quote is no longer on screen. Sessions are a limited resource, and an abandoned one holds a slot against your per-key limit until its TTL fires.
+</Note>
+
+## Example integration
+
+A framework-agnostic reference in about 40 lines:
+
+```ts
+const WS_URL = "wss://flash.definitive.fi/v1/ws";
+const API_KEY = "dpka_…";
+const SUB_ID = "quote-1";
+
+const request = {
+  targetChain: "base",
+  contraChain: "base",
+  targetAsset: "0x4200000000000000000000000000000000000006", // WETH
+  contraAsset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC
+  side: "buy",
+  qty: "100",
+  orderType: "market",
+  maxSlippage: "0.05",
+  funderAddress: "0x…",
+};
+
+let latest = null; // newest quote; the only one safe to sign and submit
+
+function connect() {
+  const ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ channel: "quotes", type: "subscribe", subscriptionId: SUB_ID, apiKey: API_KEY, request }));
+    ws.send(JSON.stringify({ channel: "heartbeats", type: "subscribe", apiKey: API_KEY })); // keeps the socket alive
+  };
+
+  ws.onmessage = (e) => {
+    const f = JSON.parse(e.data);
+    if (f.type === "quote") {
+      latest = f.quote; // each revision replaces the last
+      render(latest);
+    } else if (f.type === "quote_expired") {
+      latest = null; // nothing here is submittable anymore
+      if (f.reason === "ttl") resubscribe(ws); // new subscriptionId, fresh session
+      else if (f.reason === "consumed") trackOrder(f.orderId);
+    } else if (f.type === "error") {
+      console.warn("[flash-ws]", f.code, f.message, f.subscriptionId);
+      // subscribe-time errors (INVALID_REQUEST, SUBSCRIPTION_LIMIT, …) leave the socket usable
+    }
+    // heartbeat and ack frames need no action
+  };
+
+  ws.onclose = () => { latest = null; /* reconnect with capped backoff, then re-subscribe */ };
+}
+```
+
+## Errors
+
+Errors arrive as a frame you can act on. Errors tied to a subscription carry its `subscriptionId`, and the `message` is human-readable detail, for example which limit was hit:
+
+```json
+{ "type": "error", "code": "SUBSCRIPTION_LIMIT", "message": "…", "subscriptionId": "quote-1" }
+```
+
+Refused at subscribe time. The socket and its other subscriptions survive, and no `quote_expired` follows:
+
+| Code | What it means | What to do |
+| --- | --- | --- |
+| `INVALID_REQUEST` | The subscribe frame or its `request` failed validation, for example a non-market or crosschain quote | Fix the request and re-subscribe. |
+| `DUPLICATE_SUBSCRIPTION` | That `subscriptionId` is already live on this connection | Use a different id, or unsubscribe the existing one first. |
+| `SUBSCRIPTION_LIMIT` | The per-key quote subscription limit is reached | Unsubscribe an idle session, or retry with backoff. |
+| `VAULT_CREATION_FAILED` | The funder's trading vault could not be prepared | Retry. If it persists, reach out. |
+| `SUBSCRIBE_FAILED` | The subscription could not be opened | Retry with backoff. |
+
+Ends a live session. Each is followed by `quote_expired` with `reason: "error"`:
+
+| Code | What it means | What to do |
+| --- | --- | --- |
+| `INVALID_REQUEST` | Pricing rejected the request, for example an unrecognized asset address | Fix the request and re-subscribe. |
+| `NOT_FOUND` | No route or price for the requested pair | Do not retry unchanged. Check the assets and size. |
+| `FAILED_PRECONDITION` | The request cannot be quoted in its current state, for example insufficient funder balance | Fix the condition, then re-subscribe. |
+| `RATE_LIMITED` | Quoting capacity is exhausted | Retry with backoff. See [Rate limits](/rate-limits). |
+| `UNAUTHORIZED` | The session's credentials were rejected | Check your key. |
+| `SERVICE_UNAVAILABLE` | Pricing is temporarily unavailable | Retry with backoff, or fall back to [`POST /quote`](/api-reference/flash/quote). |
+| `DEADLINE_EXCEEDED` | The session timed out | Re-subscribe. |
+| `STREAM_ERROR`, `STREAM_ENDED`, `FORMAT_ERROR` | The session ended unexpectedly | Re-subscribe with a new `subscriptionId`. |
+
+`INVALID_REQUEST` and `UNAUTHORIZED` appear in both categories: rejected before a session opens, no `quote_expired` follows; rejected after the session opens, the live session ends and `quote_expired` arrives right after the error frame. Do not key "is a terminal frame coming" off the code alone. Treat an error frame as the failure of the subscribe attempt it answers, and a live session as over only when its `quote_expired` arrives.
+
+Connection-level codes like `UNAUTHORIZED`, `CONNECTION_LIMIT`, and `BAD_JSON` are covered in [Connection](/api-reference/flash/websocket-connection#errors).
+
+<CardGroup cols={2}>
+  <Card title="Orders WebSocket" icon="bolt" href="/api-reference/flash/websocket">
+    Stream a funder's open orders on the same connection.
+  </Card>
+  <Card title="Market Order" icon="code" href="/market-order">
+    Sign and submit a quote end to end on EVM and Solana.
+  </Card>
+</CardGroup>
