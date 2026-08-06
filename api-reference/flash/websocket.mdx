@@ -7,26 +7,13 @@ The Orders WebSocket streams a funder's open orders in real time. Subscribe and 
 
 **Endpoint:** `wss://flash.definitive.fi/v1/ws`
 
-## Channels
+Connection handling (authentication, multiplexing, heartbeats, reconnecting, connection limits, and connection-level errors) is covered in [Connection](/api-reference/flash/websocket-connection). This page documents the `orders` channel.
 
-| Channel | What it delivers | Auth required |
-| --- | --- | --- |
-| `orders` | A funder's open orders: a `snapshot` on subscribe, then an `update` when an order changes or a new one is placed | Yes |
-| `heartbeats` | A keep-alive frame once per second | Yes |
+## Working with the orders channel
 
-## Authenticating
-
-Both channels require authentication. Include your Flash API key as `apiKey` in every `subscribe` message. A read-scoped key works, since the stream is read-only. Get a key from [Become an Integrator](/getting-started).
-
-## Working with the WebSocket
-
-- Both channels run over the same connection. Open one socket, then subscribe to `orders` and `heartbeats` on it.
-- Send your `subscribe` message as soon as the connection opens.
 - One connection streams one funder. Open a separate connection for each funder you track.
-- The per-key connection limit is >50. If you need it raised, reach out.
-- Also subscribe to the [`heartbeats`](#heartbeats-channel) channel so the connection stays open when order updates are sparse. Idle connections with no traffic are closed after about 60 seconds.
-- On disconnect, reconnect with capped backoff and jitter, then re-subscribe. Every subscribe returns a fresh snapshot.
-- On `UNAUTHORIZED`, stop reconnecting and check your API key; reconnecting with the same key will not authenticate. Other closes, including `CONNECTION_LIMIT`, are safe to retry with backoff.
+- Also subscribe to [`heartbeats`](/api-reference/flash/websocket-connection#heartbeats) so the connection stays open when order updates are sparse.
+- Every subscribe returns a fresh snapshot, so re-subscribing after a reconnect fully reseeds your state.
 - If the stream is unavailable (`STREAMING_UNAVAILABLE`), fall back to polling [`GET /orders`](/api-reference/flash/list-orders).
 
 ## Orders channel
@@ -92,27 +79,9 @@ When an order changes, or a new order is placed, you receive an `update` carryin
 
 Looking for a field that is not listed here? Fetch the full order from [`GET /orders/{orderId}`](/api-reference/flash/get-order).
 
-## Heartbeats channel
-
-Subscribe to `heartbeats` to receive a keep-alive frame once per second. This keeps the connection open when order updates are sparse, so a quiet stream is not closed for being idle. Subscribe with just your `apiKey`:
-
-```json
-{ "channel": "heartbeats", "type": "subscribe", "apiKey": "dpka_…" }
-```
-
-Each frame carries an incrementing `counter` and a timestamp:
-
-```json
-{ "channel": "heartbeats", "type": "heartbeat", "counter": 1, "timestamp": "2026-01-01T00:00:00.000Z" }
-```
-
-<Tip>
-Subscribe to `heartbeats` alongside `orders` on every connection. It is the simplest way to keep a low-activity stream alive.
-</Tip>
-
 ## Unsubscribing
 
-Stop a channel with an `unsubscribe` message. The server re-acks your remaining channels.
+Stop the channel with an `unsubscribe` message. The server re-acks your remaining channels.
 
 ```json
 { "channel": "orders", "type": "unsubscribe" }
@@ -184,13 +153,11 @@ Errors arrive as a frame you can act on:
 
 | Code | What it means | What to do |
 | --- | --- | --- |
-| `UNAUTHORIZED` | The `apiKey` is missing, invalid, or does not match this connection | Check your key. Do not reconnect. |
 | `FUNDER_REQUIRED` | Subscribed to `orders` without a `funderAddress` | Include `funderAddress`. |
 | `FUNDER_LOCKED` | Tried to stream a different funder on the same connection | Open a new connection per funder. |
-| `CONNECTION_LIMIT` | Too many open connections for this key | Reduce concurrency for the key. A backed-off reconnect recovers as slots free. |
 | `STREAMING_UNAVAILABLE` | The stream is temporarily unavailable | Fall back to [`GET /orders`](/api-reference/flash/list-orders). |
 
-Malformed or transient errors (`BAD_JSON`, `UNKNOWN_CHANNEL`, `UNKNOWN_TYPE`, `SUBSCRIBE_FAILED`, `SNAPSHOT_FAILED`, `STREAM_ERROR`, `INTERNAL_ERROR`) mean the message was invalid or the server hit a temporary issue. Fix the message, or reconnect and re-subscribe.
+Transient errors (`SUBSCRIBE_FAILED`, `SNAPSHOT_FAILED`, `STREAM_ERROR`) mean the server hit a temporary issue; reconnect and re-subscribe. Connection-level codes like `UNAUTHORIZED` and `CONNECTION_LIMIT` are covered in [Connection](/api-reference/flash/websocket-connection#errors).
 
 <CardGroup cols={2}>
   <Card title="Order statuses" icon="list-check" href="/order-statuses">
