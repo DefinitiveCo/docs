@@ -1,0 +1,32 @@
+---
+title: "Changelog"
+description: "New features, improvements, and updates to the Flash API."
+---
+
+<Update label="August 6, 2026">
+  Updates since Flash API launched.
+
+  ## Cross-Chain Market Orders
+
+  Trade across chains in a single order: EVM to EVM and EVM to Solana cross-chain execution is live for market orders, with advanced order types coming soon. See [Cross-Chain Orders](/crosschain-orders).
+
+  ## Post-Trade Reporting
+
+  Pull post-trade fill data to power analytics, reporting, and PnL directly in your app. See [Post-Trade Reporting](/post-trade-reporting).
+
+  ## Integrator Dashboard
+
+  Track your integration's activity and fees in one place. Instructions to access are in [Getting Started](/getting-started).
+
+  ## Updating an Existing Order
+
+  Change the limit price of a resting limit, stop-limit, or take-profit-limit order with a single gasless, offchain signature. No cancel and re-place, and the order keeps its `orderId`. See [Updating Orders](/updating-orders).
+
+  ## Asset Search
+
+  Find any tradable asset by symbol, name, or address. One call to `GET /search` returns ranked matches with everything an order needs, plus price, liquidity, and a risk flag. See [Finding asset addresses](/placing-orders#finding-asset-addresses).
+
+  ## Cross-Rate Pricing
+
+  Price limit and trigger orders in the pair rate, not just USD. Set `limitCrossPrice` or `crossPrice` to quote the target asset in contra-asset units, alongside the existing notional (USD) basis. See [Pricing basis](/placing-orders#pricing-basis).
+</Update>

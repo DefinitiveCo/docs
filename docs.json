@@ -117,6 +117,10 @@
             "pages": ["api-reference/flash/websocket"]
           }
         ]
+      },
+      {
+        "tab": "Changelog",
+        "pages": ["changelog"]
       }
     ]
   }
