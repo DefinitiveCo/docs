@@ -1,9 +1,9 @@
 ---
-title: "Crosschain Orders"
-description: "Quote, sign, and submit a crosschain order with Flash API."
+title: "Cross-Chain Orders"
+description: "Quote, sign, and submit a cross-chain order with Flash API."
 ---
 
-Crosschain orders are live. Set `targetChain` and `contraChain` to different supported chains. Crosschain execution supports `market` orders only and does not support QuickTrade.
+Cross-chain orders are live. Set `targetChain` and `contraChain` to different supported chains. Cross-chain execution supports `market` orders only and does not support QuickTrade.
 
 ## How direction works
 
@@ -54,12 +54,13 @@ Funds are refunded to the original funder.
 
 ### Why can't I cancel my order?
 
-After a crosschain transaction is sent onchain, Flash must wait for the crosschain order response before allowing cancellation because the funds are still in flight.
+After a cross-chain transaction is sent onchain, Flash must wait for the cross-chain order response before allowing cancellation because the funds are still in flight.
 
 <CardGroup cols={2}>
   <Card title="EVM Overview" icon="cube" href="/evm-overview">
     Approval and EIP-712 signing on an EVM source chain.
   </Card>
+
   <Card title="Solana Overview" icon="circle-nodes" href="/solana-overview">
     Delegation and Ed25519 signing on a Solana source chain.
   </Card>
