@@ -1,6 +1,6 @@
 ---
 title: "Connection"
-description: "One WebSocket connection for everything Flash streams: how to connect, authenticate, multiplex channels, stay alive with heartbeats, and handle connection-level errors."
+description: "One WebSocket connection for everything Flash streams: how to connect, authenticate, multiplex channels, detect a dead connection with heartbeats, and handle connection-level errors."
 ---
 
 Flash streams over a single WebSocket endpoint. Open one connection, then subscribe to the channels you need; they multiplex over the same socket.
@@ -17,7 +17,7 @@ Flash streams over a single WebSocket endpoint. Open one connection, then subscr
 
 ## Authenticating
 
-There is no connect-time handshake. Authenticate in-band by including your Flash API key as `apiKey` in every `subscribe` message. A read-scoped key works, since the streams are read-only. Get a key from [Become an Integrator](/getting-started).
+There is no connect-time handshake. Authenticate in-band by including your Flash API key as `apiKey` in every `subscribe` message. Get a key from [Become an Integrator](/getting-started).
 
 A connection is pinned to one portfolio on first successful auth, and to one API key once a channel is active. A `subscribe` with a different key on the same socket is rejected with `UNAUTHORIZED` and the connection is closed.
 
@@ -45,7 +45,7 @@ Channel-specific limits, like the quote subscription cap, are documented on the 
 
 ## Heartbeats
 
-Idle connections with no traffic are closed after about 60 seconds. Subscribe to `heartbeats` on every connection to receive a keep-alive frame once per second, so a quiet stream is not closed for being idle:
+Subscribe to `heartbeats` on every connection to receive a keep-alive frame once per second:
 
 ```json
 { "channel": "heartbeats", "type": "subscribe", "apiKey": "dpka_…" }
@@ -57,7 +57,7 @@ Each frame carries an incrementing `counter` and a timestamp:
 { "channel": "heartbeats", "type": "heartbeat", "counter": 1, "timestamp": "2026-01-01T00:00:00.000Z" }
 ```
 
-Heartbeat frames need no action. A gap in them is a signal the connection is unhealthy, so reconnect rather than waiting.
+Heartbeat frames need no action. They give a quiet connection two things: liveness detection (a gap in them means the connection is unhealthy, so reconnect rather than waiting) and steady traffic through any intermediary that closes idle connections on its own timeout.
 
 ## Reconnecting
 

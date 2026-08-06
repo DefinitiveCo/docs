@@ -15,7 +15,7 @@ Connection handling (authentication, multiplexing, heartbeats, reconnecting, con
 
 - You choose the `subscriptionId`. It labels every frame for that subscription and must be unique among your live subscriptions on that connection.
 - One connection can hold many quote subscriptions. Each one is an independent pricing session, so run one per quote request you are showing.
-- Subscribe to [`heartbeats`](/api-reference/flash/websocket-connection#heartbeats) so a quiet connection is not closed for being idle.
+- Subscribe to [`heartbeats`](/api-reference/flash/websocket-connection#heartbeats) so you can tell a healthy-but-quiet connection from a dead one.
 - A session lives about 120 seconds. Re-subscribe with a new `subscriptionId` to continue quoting after it expires.
 - Sessions do not survive a disconnect, and a resumed quote is not the same quote. After a reconnect, re-subscribe for a fresh session.
 - If the stream is unavailable, fall back to polling [`POST /quote`](/api-reference/flash/quote).
@@ -26,9 +26,8 @@ Connection handling (authentication, multiplexing, heartbeats, reconnecting, con
 | --- | --- |
 | Order type | `market` only. Any other `orderType` is rejected with `INVALID_REQUEST`. |
 | Chains | Same-chain only. `targetChain` and `contraChain` must match; crosschain quotes are rejected with `INVALID_REQUEST`. |
-| Concurrency | 30 live quote subscriptions per API key, pooled across every connection using that key. |
 
-Hitting the per-key limit is not fatal. The subscription is refused with `SUBSCRIPTION_LIMIT`, and the socket and its other subscriptions keep running.
+Concurrent quote subscriptions are capped per API key. Hitting the cap is not fatal: the subscription is refused with `SUBSCRIPTION_LIMIT`, and the socket and its other subscriptions keep running.
 
 ## Quotes channel
 
@@ -170,17 +169,17 @@ function connect() {
 
 ## Errors
 
-Errors arrive as a frame you can act on. Errors tied to a subscription carry its `subscriptionId`:
+Errors arrive as a frame you can act on. Errors tied to a subscription carry its `subscriptionId`, and the `message` is human-readable detail, for example which limit was hit:
 
 ```json
-{ "type": "error", "code": "SUBSCRIPTION_LIMIT", "message": "at most 30 concurrent quote subscriptions per API key", "subscriptionId": "quote-1" }
+{ "type": "error", "code": "SUBSCRIPTION_LIMIT", "message": "…", "subscriptionId": "quote-1" }
 ```
 
-Refused at subscribe time. The socket and its other subscriptions survive, and no `quote_expired` follows:
+Refused at subscribe time by local validation. The socket and its other subscriptions survive, and no `quote_expired` follows:
 
 | Code | What it means | What to do |
 | --- | --- | --- |
-| `INVALID_REQUEST` | The subscribe frame or its `request` is invalid, or the quote is not a same-chain market order | Fix the request and re-subscribe. |
+| `INVALID_REQUEST` | The subscribe frame or its `request` failed validation, for example a non-market or crosschain quote | Fix the request and re-subscribe. |
 | `DUPLICATE_SUBSCRIPTION` | That `subscriptionId` is already live on this connection | Use a different id, or unsubscribe the existing one first. |
 | `SUBSCRIPTION_LIMIT` | The per-key quote subscription limit is reached | Unsubscribe an idle session, or retry with backoff. |
 | `VAULT_CREATION_FAILED` | The funder's trading vault could not be prepared | Retry. If it persists, reach out. |
@@ -190,12 +189,16 @@ Ends a live session. Each is followed by `quote_expired` with `reason: "error"`:
 
 | Code | What it means | What to do |
 | --- | --- | --- |
+| `INVALID_REQUEST` | Upstream pricing rejected the request, for example an unrecognized asset address | Fix the request and re-subscribe. |
 | `NOT_FOUND` | No route or price for the requested pair | Do not retry unchanged. Check the assets and size. |
 | `FAILED_PRECONDITION` | The request cannot be quoted in its current state, for example insufficient funder balance | Fix the condition, then re-subscribe. |
 | `RATE_LIMITED` | Quoting capacity is exhausted | Retry with backoff. See [Rate limits](/rate-limits). |
+| `UNAUTHORIZED` | Upstream rejected the session's credentials | Check your key. |
 | `SERVICE_UNAVAILABLE` | Pricing is temporarily unavailable | Retry with backoff, or fall back to [`POST /quote`](/api-reference/flash/quote). |
 | `DEADLINE_EXCEEDED` | The session timed out upstream | Re-subscribe. |
 | `STREAM_ERROR`, `STREAM_ENDED`, `FORMAT_ERROR` | The session ended unexpectedly | Re-subscribe with a new `subscriptionId`. |
+
+`INVALID_REQUEST` and `UNAUTHORIZED` appear in both categories: rejected before a session opens, no `quote_expired` follows; rejected upstream, the live session ends and `quote_expired` arrives right after the error frame. Do not key "is a terminal frame coming" off the code alone. Treat an error frame as the failure of the subscribe attempt it answers, and a live session as over only when its `quote_expired` arrives.
 
 Connection-level codes like `UNAUTHORIZED`, `CONNECTION_LIMIT`, and `BAD_JSON` are covered in [Connection](/api-reference/flash/websocket-connection#errors).
 

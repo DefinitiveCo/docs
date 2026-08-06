@@ -12,7 +12,7 @@ Connection handling (authentication, multiplexing, heartbeats, reconnecting, con
 ## Working with the orders channel
 
 - One connection streams one funder. Open a separate connection for each funder you track.
-- Also subscribe to [`heartbeats`](/api-reference/flash/websocket-connection#heartbeats) so the connection stays open when order updates are sparse.
+- Also subscribe to [`heartbeats`](/api-reference/flash/websocket-connection#heartbeats) so you can tell a healthy-but-quiet connection from a dead one when order updates are sparse.
 - Every subscribe returns a fresh snapshot, so re-subscribing after a reconnect fully reseeds your state.
 - If the stream is unavailable (`STREAMING_UNAVAILABLE`), fall back to polling [`GET /orders`](/api-reference/flash/list-orders).
 
@@ -93,7 +93,7 @@ A framework-agnostic reference in about 40 lines:
 
 ```ts
 const WS_URL = "wss://flash.definitive.fi/v1/ws";
-const API_KEY = "dpka_…"; // read-scoped Flash key
+const API_KEY = "dpka_…";
 const FUNDER = "0x…";
 
 const orders = new Map(); // orderId -> FlashOrderUpdate
