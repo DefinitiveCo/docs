@@ -39,7 +39,7 @@ Stop a channel with an `unsubscribe` message on that channel. The server re-acks
 
 ## Connection limits
 
-The per-key connection limit is >50, pooled across everything using that key. If you need it raised, reach out. Exceeding it is rejected with `CONNECTION_LIMIT` and the connection is closed; a backed-off reconnect recovers as slots free.
+The per-key connection limit is at least 50, pooled across everything using that key. If you need it raised, reach out. Exceeding it is rejected with `CONNECTION_LIMIT` and the connection is closed; a backed-off reconnect recovers as slots free.
 
 Channel-specific limits, like the quote subscription cap, are documented on the channel's page.
 
